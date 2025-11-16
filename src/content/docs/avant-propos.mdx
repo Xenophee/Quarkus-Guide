@@ -1,0 +1,36 @@
+---
+title: Avant-propos
+description: Introduction au guide sur Quarkus, ses objectifs et le contexte de son écriture.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+import { Underline } from '@components/index';
+
+
+## Quarkus, c'est quoi ?
+
+**Quarkus** est un framework Java moderne conçu pour les applications cloud-native et les environnements serverless. Il se distingue par sa rapidité, son faible encombrement mémoire et son intégration étroite avec des technologies comme **Kubernetes**, **Docker** et **GraalVM**.
+
+Issu de l’écosystème **Red Hat** et **JBoss**, Quarkus optimise l’expérience des développeurs Java en mettant l’accent sur la productivité et la performance.
+
+Contrairement à des frameworks plus traditionnels comme **Spring Boot**, Quarkus adopte une approche *"build-time"* (par opposition à *"run-time"*) : beaucoup de configurations et optimisations sont effectuées lors de la compilation plutôt qu’à l’exécution.
+
+Arrivé sur le marché en 2019, **Quarkus** est encore relativement jeune et ne bénéficie pas encore de l'écosystème riche et mature de **Spring Boot**. Toutefois, il gagne en popularité et en adoption, notamment pour les projets nécessitant des performances élevées et une intégration fluide avec les technologies cloud modernes. Ses fonctionnalités ne cessent de s'améliorer, et la communauté autour de **Quarkus** est en pleine expansion.
+
+
+## Objectif du guide
+
+Comme beaucoup, j'ai commencé avec **Spring Boot** pour mes projets Java. Cependant, dans le cadre de mon activité professionnelle, j'ai dû me familiariser avec **Quarkus**.
+
+Ce guide est un retour d'expérience sur mon apprentissage et l'utilisation de ce framework dans divers projets. Il vise à partager des bonnes pratiques, des astuces et des pièges à éviter pour les développeurs souhaitant l'adopter. C'est aussi l'occasion de créer une ressource francophone dans le domaine... un petit oasis dans un désert de documentation en français !
+
+
+<Aside type="caution">
+Etant donné ma juniorité dans le monde du développement applicatif, <Underline>ce guide n'a pas vocation à être exhaustif ou définitif</Underline>. Il reflète mon expérience personnelle et les leçons que j'ai tirées jusqu'à présent. N'hésitez pas à compléter ou corriger les informations présentées ici en fonction de vos propres expériences !
+</Aside>
+
+<Aside type="note">
+Tous les exemples de code rencontrés dans ce guide sont neutres et n'appartiennent à aucun projet spécifique en dehors de [Commit&Care](https://github.com/Xenophee/Commit-Care) qui me sert de terrain d'expérimentation, et peut être d'autres projets personnels.
+
+🔐 **Aucun projet professionnel n'est divulgué ici.**
+</Aside>

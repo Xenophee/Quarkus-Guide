@@ -1,0 +1,103 @@
+@import "./aside-badge.css";
+
+@layer base, starlight, theme, components, utilities;
+
+@import '@astrojs/starlight-tailwind';
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+
+@theme {
+	/*
+	Configure your Tailwind theme that will be used by Starlight.
+	https://starlight.astro.build/guides/css-and-tailwind/#styling-starlight-with-tailwind
+	*/
+
+    --color-accent-50: var(--color-rose-50);
+    --color-accent-100: var(--color-rose-100);
+    --color-accent-200: var(--color-rose-200);
+    --color-accent-300: var(--color-rose-300);
+    --color-accent-400: var(--color-rose-400);
+    --color-accent-500: var(--color-rose-500);
+    --color-accent-600: var(--color-rose-600);
+    --color-accent-700: var(--color-rose-700);
+    --color-accent-800: var(--color-rose-800);
+    --color-accent-900: var(--color-rose-900);
+    --color-accent-950: var(--color-rose-950);
+
+    --color-gray-50: var(--color-slate-50);
+    --color-gray-100: var(--color-slate-100);
+    --color-gray-200: var(--color-slate-200);
+    --color-gray-300: var(--color-slate-300);
+    --color-gray-400: var(--color-slate-400);
+    --color-gray-500: var(--color-slate-500);
+    --color-gray-600: var(--color-slate-600);
+    --color-gray-700: var(--color-slate-700);
+    --color-gray-800: var(--color-slate-800);
+    --color-gray-900: var(--color-slate-900);
+    --color-gray-950: var(--color-slate-950);
+
+}
+
+#starlight__sidebar {
+
+    & a {
+        @apply border-4 border-transparent transition;
+    }
+
+    & [aria-current="page"] {
+        @apply dark:bg-blue-200 hover:bg-rose-700 dark:hover:bg-blue-100 dark:text-slate-900;
+    }
+
+    & [aria-current="false"] {
+        @apply hover:text-rose-600 dark:hover:text-blue-200;
+    }
+
+}
+
+
+[rel], [aria-label="Rechercher"] { /* Pour l'avant / après */
+    @apply hover:!border-rose-600 dark:hover:!border-blue-300 transition;
+
+    & span span {
+        @apply text-sky-600 dark:text-sky-200;
+    }
+}
+
+
+h1:not(.hero h1) {
+    @apply text-transparent bg-gradient-to-tl from-rose-600 to-rose-800 dark:from-rose-300 dark:to-rose-500 bg-clip-text
+}
+
+h2:not(#starlight__on-this-page) {
+    @apply mb-14;
+}
+
+h2:not(#starlight__on-this-page), h3, h4, h5, h6 {
+    @apply text-sky-600 dark:text-sky-200;
+}
+
+a {
+    @apply !rounded;
+}
+
+.hero {
+    & a {
+        @apply bg-rose-600 dark:bg-rose-700 hover:bg-rose-700 dark:hover:bg-rose-900 transition border-white border-1 !text-white px-15;
+        box-shadow: rgba(0, 0, 0, 0.16) 0px 10px 36px 0px, rgba(0, 0, 0, 0.06) 0px 0px 0px 1px;
+    }
+}
+
+.site-title {
+    @apply font-semibold text-transparent bg-clip-text bg-gradient-to-b from-blue-600 to-blue-400 dark:from-rose-700 dark:to-rose-400;
+}
+
+.content-panel a {
+    @apply text-pink-800 dark:text-pink-200 hover:text-pink-600 dark:hover:text-pink-400 transition;
+}
+
+
+/*
+Add additional Tailwind styles to this file:
+https://tailwindcss.com/docs/adding-custom-styles#using-custom-css
+*/
