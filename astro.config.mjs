@@ -3,6 +3,7 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import tailwindcss from '@tailwindcss/vite';
 import starlightVersions from 'starlight-versions'
+import starlightGiscus from 'starlight-giscus'
 
 // https://astro.build/config
 export default defineConfig({
@@ -12,6 +13,14 @@ export default defineConfig({
                 /*starlightVersions({
                     versions: [{ slug: '3.x' }],
                 }),*/
+                starlightGiscus({
+                    repo: 'Xenophee/Quarkus-Guide',
+                    repoId: 'R_kgDOQW1VjA',
+                    category: 'Announcements',
+                    categoryId: 'DIC_kwDOQW1VjM4Cx2nt',
+                    inputPosition: "top",
+                    lazy: true
+                })
             ],
 			title: 'Quarkus Guide',
             favicon: '/logo.png',
