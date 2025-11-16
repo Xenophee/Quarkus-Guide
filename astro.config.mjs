@@ -19,7 +19,11 @@ export default defineConfig({
                     category: 'Announcements',
                     categoryId: 'DIC_kwDOQW1VjM4Cx2nt',
                     inputPosition: "top",
-                    lazy: true
+                    lazy: true,
+                    theme: {
+                        light: 'light_protanopia',
+                        dark: 'dark_protanopia',
+                    }
                 })
             ],
 			title: 'Quarkus Guide',
