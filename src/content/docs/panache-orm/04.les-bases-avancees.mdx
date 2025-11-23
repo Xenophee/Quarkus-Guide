@@ -1,0 +1,313 @@
+---
+title: Les bases avancées
+description: Approfondir les opérations CRUD avec Panache ORM dans Quarkus avec les filtres.
+sidebar:
+    order: 4
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Underline, HR } from '@components/index';
+
+
+Dans cet article, nous allons explorer des fonctionnalités avancées de **Panache ORM** dans **Quarkus**, en mettant l'accent sur l'utilisation des filtres pour affiner les opérations CRUD (Create, Read, Update, Delete). Les filtres permettent de définir des critères spécifiques pour les opérations, offrant ainsi une flexibilité accrue dans la gestion des entités.
+
+<Aside type="note">
+À partir de maintenant, les exemples de code se baseront sur le pattern **Repository** uniquement afin de garder en tête les bonnes pratiques. L'équivalent en **Active Record** est très similaire.
+</Aside>
+
+
+## Création d'une entité
+
+Pour commencer, nous devons définir une entité qui représentera une table dans notre base de données. Voici un exemple d’entité `Alien` pour illustrer les opérations.
+
+```java
+@Entity
+@Table(name = "aliens")
+public class Alien {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String codename;
+
+    private int healthPoints;
+
+    private int attackPower;
+
+    private int stealthLevel;
+
+    // Getters et Setters
+
+}
+```
+
+Puis la classe **repository** associée :
+
+```java
+@ApplicationScoped
+public class AlienRepository implements PanacheRepository<Alien> {
+    // Méthodes CRUD personnalisées sont ajoutées ici
+}
+```
+
+<HR />
+
+## Utilisation des filtres avec Panache ORM
+
+Avant toute chose, il faut savoir qu'il existe deux façons d'indiquer des filtres dans les méthodes **Panache** :
+
+1. En utilisant des paramètres positionnels (exemple : `?1`, `?2`, etc.)
+2. En utilisant des paramètres nommés (exemple : `:paramName`)
+
+Le premier est plus simple à utiliser, mais requiert de faire attention à l'ordre des paramètres. Le second est plus verbeux, mais moins sujet aux erreurs lorsque plusieurs paramètres sont utilisés. Nous allons voir des exemples pour les deux méthodes.
+
+<Aside type="tip">
+Les bonnes pratiques recommandent d'utiliser les **paramètres nommés** pour des requêtes complexes.
+</Aside>
+
+
+### <i class="ri-search-line"></i> Lecture (Read)
+
+Pour lire des entités en utilisant des filtres, vous pouvez utiliser la méthode `find` de Panache avec une clause `where` sans avoir besoin de l'ajouter explicitement.
+
+**Pour récupérer un alien en fonction de son nom de code :**
+
+<Tabs>
+    <TabItem label="Paramètres positionnels" icon="right-caret">
+
+    ```java
+    Alien alien = alienRepository.find("codename = ?1", "Zorg").firstResult();
+    ```
+    ou si l'on veut encapsuler un `NULL` potentiel :
+
+    ```java
+    Optional<Alien> alien = alienRepository.find("codename = ?1", "Zorg").firstResultOptional();
+    ```
+
+    Le paramètre `?1` est remplacé par la valeur fournie ("Zorg" dans cet exemple).
+
+    </TabItem>
+
+    <TabItem label="Paramètres nommés" icon="right-caret">
+
+    ```java
+    Alien alien = alienRepository.find("codename = :name",
+            Parameters.with("name", "Zorg")).firstResult();
+    ```
+    ou si l'on veut encapsuler un `NULL` potentiel :
+
+    ```java
+    Optional<Alien> alien = alienRepository.find("codename = :name",
+            Parameters.with("name", "Zorg")).firstResultOptional();
+    ```
+
+    Le paramètre `:name` est remplacé par la valeur fournie ("Zorg" dans cet exemple).
+
+    </TabItem>
+</Tabs>
+
+<Aside type="tip">
+Pour éviter les erreurs de type `NoResultException`, il est recommandé d'utiliser la méthode `firstResultOptional()` qui renvoie un `Optional<Alien>`. Cela permet de gérer plus facilement et plus proprement les cas où aucun résultat n'est trouvé.
+</Aside>
+
+
+<HR />
+
+**Pour récupérer tous les aliens dont la puissance d'attaque est supérieure à 50 :**
+
+<Tabs>
+    <TabItem label="Paramètres positionnels" icon="right-caret">
+
+    ```java
+    List<Alien> strongAliens = alienRepository.find("attackPower > ?1", 50).list();
+    ```
+
+    Pour plus de concision, on peut aussi utiliser la méthode `list()` directement :
+
+    ```java
+    List<Alien> strongAliens = alienRepository.list("attackPower > ?1", 50);
+    ```
+
+    Le paramètre `?1` est remplacé par la valeur fournie (50 dans cet exemple).
+
+    </TabItem>
+
+    <TabItem label="Paramètres nommés" icon="right-caret">
+
+    ```java
+    List<Alien> strongAliens = alienRepository.find("attackPower > :power",
+            Parameters.with("power", 50)).list();
+    ```
+
+    Pour plus de concision, on peut aussi utiliser la méthode `list()` directement :
+
+    ```java
+    List<Alien> strongAliens = alienRepository.list("attackPower > :power",
+            Parameters.with("power", 50));
+    ```
+
+    Le paramètre `:power` est remplacé par la valeur fournie (50 dans cet exemple).
+
+    </TabItem>
+</Tabs>
+
+<HR />
+
+Si vous avez des critères multiples, vous pouvez les ajouter sans problème en utilisant les opérateurs logiques appropriés (`AND`, `OR`, etc.) comme si vous écriviez une **requête SQL classique**.
+
+**Pour compter le nombre d'aliens dont les points de vie sont entre 30 et 70 :**
+
+<Tabs>
+    <TabItem label="Paramètres positionnels" icon="right-caret">
+
+    ```java
+    long count = alienRepository.count("healthPoints between ?1 and ?2", 30, 70);
+    ```
+    Les paramètres `?1` et `?2` sont remplacés par les valeurs fournies (30 et 70 dans cet exemple).
+
+    </TabItem>
+
+    <TabItem label="Paramètres nommés" icon="right-caret">
+
+    ```java
+    long count = alienRepository.count("healthPoints between :min and :max",
+            Parameters.with("min", 30).and("max", 70));
+    ```
+    Les paramètres `:min` et `:max` sont remplacés par les valeurs fournies (30 et 70 dans cet exemple).
+
+    </TabItem>
+</Tabs>
+
+
+
+
+### <i class="ri-edit-2-line"></i> Mise à jour (Update)
+
+Pour mettre à jour des entités en utilisant des filtres, vous pouvez utiliser la méthode `update` de Panache avec une clause `where`.
+
+**Pour mettre à jour les points de vie de tous les aliens dont le niveau de furtivité est supérieur à 5 :**
+
+
+<Tabs>
+    <TabItem label="Paramètres positionnels" icon="right-caret">
+
+    ```java
+    alienRepository.update("healthPoints = ?1 where stealthLevel > ?2", 100, 5);
+    ```
+    Les paramètres `?1` et `?2` sont remplacés par les valeurs fournies (100 et 5 dans cet exemple).
+
+    </TabItem>
+
+    <TabItem label="Paramètres nommés" icon="right-caret">
+
+    ```java
+    alienRepository.update("healthPoints = :health where stealthLevel > :stealth",
+            Parameters.with("health", 100).and("stealth", 5));
+    ```
+    Les paramètres `:health` et `:stealth` sont remplacés par les valeurs fournies (100 et 5 dans cet exemple).
+
+    </TabItem>
+</Tabs>
+
+<HR />
+
+Si vous avez des critères multiples, vous pouvez les ajouter sans problème en utilisant les opérateurs logiques appropriés (`AND`, `OR`, etc.) comme si vous écriviez une **requête SQL classique**.
+
+**Pour mettre à jour la puissance d'attaque de tous les aliens dont les points de vie sont inférieurs à 40 et le niveau de furtivité est supérieur à 7 :**
+
+<Tabs>
+    <TabItem label="Paramètres positionnels" icon="right-caret">
+
+    ```java
+    alienRepository.update("attackPower = ?1 where healthPoints < ?2 and stealthLevel > ?3", 75, 40, 7);
+    ```
+    Les paramètres `?1`, `?2` et `?3` sont remplacés par les valeurs fournies (75, 40 et 7 dans cet exemple).
+
+    </TabItem>
+
+    <TabItem label="Paramètres nommés" icon="right-caret">
+
+    ```java
+    alienRepository.update("attackPower = :power where healthPoints < :health and stealthLevel > :stealth",
+            Parameters.with("power", 75)
+                      .and("health", 40)
+                      .and("stealth", 7));
+    ```
+    Les paramètres `:power`, `:health` et `:stealth` sont remplacés par les valeurs fournies (75, 40 et 7 dans cet exemple).
+
+    </TabItem>
+</Tabs>
+
+<HR />
+
+<Aside type="tip">
+Elle est indispensable pour les mises à jour multiples, mais aussi pour une entité unique en évitant de charger l'entité au préalable. Il suffit de s'assurer que le filtre utilisé dans la clause `where` identifie de manière unique l'entité à mettre à jour (par exemple, en utilisant son ID). Gain de performance garanti !
+</Aside>
+
+<Aside type="caution">
+    La méthode `update` avec des filtres est puissante, mais elle doit être utilisée avec précaution pour éviter des mises à jour accidentelles de plusieurs enregistrements. Assurez-vous toujours de bien définir vos critères dans la clause `where`.
+</Aside>
+
+
+### <i class="ri-delete-bin-2-line"></i> Suppression (Delete)
+
+Pour supprimer des entités en utilisant des filtres, vous pouvez utiliser la méthode `delete` de **Panache** avec une clause `where` sans avoir besoin de l'ajouter explicitement.
+
+**Pour supprimer tous les aliens dont le niveau de furtivité est à 3 :**
+
+<Tabs>
+    <TabItem label="Paramètres positionnels" icon="right-caret">
+
+    ```java
+    alienRepository.delete("stealthLevel = ?1", 3);
+    ```
+    Le paramètre `?1` est remplacé par la valeur fournie (3 dans cet exemple).
+
+    </TabItem>
+
+    <TabItem label="Paramètres nommés" icon="right-caret">
+
+    ```java
+    alienRepository.delete("stealthLevel = :level",
+            Parameters.with("level", 3));
+    ```
+    Le paramètre `:level` est remplacé par la valeur fournie (3 dans cet exemple).
+
+    </TabItem>
+</Tabs>
+
+
+<HR/>
+
+
+Si vous avez des critères multiples, vous pouvez les ajouter sans problème en utilisant les opérateurs logiques appropriés (`AND`, `OR`, etc.) comme si vous écriviez une **requête SQL classique**.
+
+**Pour supprimer tous les aliens dont la puissance d'attaque est inférieure à 20 et les points de vie différents de 50 :**
+
+<Tabs>
+    <TabItem label="Paramètres positionnels" icon="right-caret">
+
+    ```java
+    alienRepository.delete("attackPower < ?1 and healthPoints <> ?2", 20, 50);
+    ```
+    Les paramètres `?1` et `?2` sont remplacés par les valeurs fournies (20 et 50 dans cet exemple).
+
+    </TabItem>
+
+    <TabItem label="Paramètres nommés" icon="right-caret">
+
+    ```java
+    alienRepository.delete("attackPower < :power and healthPoints <> :health",
+            Parameters.with("power", 20)).and("health", 50);
+    ```
+    Les paramètres `:power` et `:health` sont remplacés par les valeurs fournies (20 et 50 dans cet exemple).
+
+    </TabItem>
+</Tabs>
+
+<HR />
+
+<Aside type="caution">
+La méthode `delete` avec des filtres est très puissante, mais elle doit être utilisée avec précaution pour éviter de supprimer accidentellement des données importantes. Assurez-vous toujours de bien définir vos critères dans la clause `where`, car elle peut supprimer plusieurs enregistrements à la fois.
+</Aside>

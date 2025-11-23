@@ -1,0 +1,138 @@
+---
+title: Introduction
+description: Introduction à l'ORM de Quarkus.
+sidebar:
+    order: 1
+---
+
+import { Aside, Card, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Underline, HR } from '@components/index';
+
+
+
+## Qu'est ce qu'un ORM ?
+
+Un **ORM** (*Object-Relational Mapping*) est un outil qui facilite l’interaction entre une application orientée objet (comme celles écrites en Java) et une base de données relationnelle (MySQL, PostgreSQL, etc.).
+
+Concrètement, un **ORM** permet de mapper les objets de l’application aux tables de la base de données, simplifiant ainsi les opérations de lecture, d’écriture et de mise à jour des données. Grâce à cette abstraction, les développeurs peuvent travailler avec des objets plutôt qu’avec des requêtes SQL, ce qui :
+
+- Améliore la productivité
+- Réduit le risque d’erreurs
+- Permet de se concentrer sur la logique métier plutôt que sur les détails SQL
+
+<Aside type="caution">
+Cependant, cette facilité peut parfois cacher des problèmes de performance si l’**ORM** n’est pas correctement utilisé. Dans certains cas, <Underline>le SQL natif reste plus rapide</Underline> et est toujours accessible pour des optimisations fines.
+</Aside>
+
+<HR />
+
+
+## L'ORM dans Quarkus
+
+**Quarkus** s’appuie sur **JPA** (*Java Persistence API*), la spécification standard pour la persistance des données en Java.
+L’implémentation la plus utilisée dans Quarkus est **Hibernate ORM**, qui offre :
+
+- La gestion complète des entités et de leurs relations
+- La génération automatique de schémas de base de données
+- Des fonctionnalités avancées au-delà de la spécification JPA
+
+**Quarkus** propose également **Panache**, une couche d’abstraction au-dessus de **Hibernate ORM**. **Panache** simplifie le développement en :
+- Réduisant le code boilerplate pour les opérations courantes sur les entités
+- Offrant une API fluide et intuitive pour les opérations CRUD (Create, Read, Update, Delete)
+- Maintenir la possibilité d’utiliser Hibernate directement pour les cas avancés
+
+
+### Installation
+
+<Card title="Dépendances Quarkus" icon="setting">
+
+Pour commencer avec les **ORM** dans **Quarkus**, il faut ajouter les dépendances nécessaires à votre projet selon votre gestionnaire de dépendances.
+
+  <Tabs>
+    <TabItem label="Maven" icon="seti:maven">
+
+    Si vous utilisez **Maven** comme gestionnaire de dépendances, voici les dépendances à ajouter dans votre fichier `pom.xml` :
+
+    Pour l'utilisation d'**Hibernate** :
+        ```xml
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-orm</artifactId>
+        </dependency>
+        ```
+    Pour l'utilisation de **Panache** :
+        ```xml
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-orm-panache</artifactId>
+        </dependency>
+        ```
+    Dans les deux cas, il est nécessaire d'ajouter <Underline>également une dépendance pour le connecteur de la base de données</Underline> utilisée (par exemple, PostgreSQL, MySQL, etc.). Pour **PostgreSQL** :
+        ```xml
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-postgresql</artifactId>
+        </dependency>
+        ```
+    </TabItem>
+
+    <TabItem label="Gradle" icon="seti:gradle">
+
+    Si vous utilisez **Gradle** comme gestionnaire de dépendances, voici les dépendances à ajouter dans votre fichier `build.gradle.kts` :
+
+    Pour l'utilisation d'**Hibernate** :
+        ```kotlin
+        implementation("io.quarkus:quarkus-hibernate-orm")
+        ```
+    Pour l'utilisation de **Panache** :
+        ```kotlin
+        implementation("io.quarkus:quarkus-hibernate-orm-panache")
+        ```
+    Dans les deux cas, il est nécessaire d'ajouter <Underline>également une dépendance pour le connecteur de la base de données</Underline> utilisée (par exemple, PostgreSQL, MySQL, etc.). Pour **PostgreSQL** :
+        ```kotlin
+        implementation("io.quarkus:quarkus-jdbc-postgresql")
+        ```
+    </TabItem>
+  </Tabs>
+</Card>
+
+
+### Comparaison Hibernate et Panache
+
+Pour mieux comprendre les différences, voici un tableau comparatif entre **Hibernate ORM** et **Panache** :
+
+| Critère                        | Hibernate ORM                     | Panache                                           |
+| ------------------------------ | --------------------------------- | ------------------------------------------------- |
+| Abstraction                    | Bas niveau                        | Haut niveau                                      |
+| Code boilerplate               | Plus de code                      | Moins de code                                    |
+| Facilité d'utilisation         | Plus complexe                     | Plus simple et intuitif                          |
+| Flexibilité                    | Très flexible                     | Moins flexible, mais suffisant pour la plupart des cas |
+| Cas d'utilisation recommandés  | Cas avancés nécessitant des optimisations fines | Développement rapide et applications courantes   |
+
+
+<Aside type="tip">
+**Panache** est idéal pour accélérer le développement tout en bénéficiant de la puissance d’**Hibernate** puisqu'il est embarqué dans Panache et qu'il est toujours possible de l’utiliser directement si nécessaire en faisant appel à l’`EntityManager`.
+</Aside>
+
+
+### Qu'est-ce que l'EntityManager ?
+
+L'**EntityManager** est l'interface centrale de JPA pour gérer la persistance des entités.
+
+C’est lui qui :
+
+- suit l’état des entités (nouvelles, gérées ou détachées).
+- gère le cycle des transactions : démarrage, commit et rollback.
+- exécute les requêtes JPQL (*Java Persistence Query Language*) ou natives.
+- déclenche le **dirty checking**, un mécanisme qui détecte les modifications apportées aux entités et les synchronise avec la base de données lors du commit.
+
+En pratique, Panache se repose sur l’EntityManager pour toutes ses opérations ; il appelle l’EntityManager sous-jacent pour effectuer le travail.
+
+<Aside type="note">
+Même si vous n’êtes pas obligé d’utiliser l’`EntityManager` directement avec **Panache**, comprendre son rôle vous aide à mieux appréhender la gestion des **transactions** et les subtilités de performance.
+</Aside>
+
+
+
+
+

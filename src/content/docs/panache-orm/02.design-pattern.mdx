@@ -1,0 +1,130 @@
+---
+title: Design Pattern
+description: Présentation des design patterns utilisés dans Panache ORM.
+sidebar:
+    order: 2
+---
+
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
+import { Underline, HR } from '@components/index';
+
+
+## C'est quoi un design pattern ?
+
+Un **design pattern** (ou *patron de conception*) est une solution réutilisable à un problème courant dans le développement logiciel. C’est un modèle ou guide réutilisable qui permet de résoudre efficacement des problèmes similaires dans différentes situations. Les **design patterns** ne sont pas des morceaux de code spécifiques, mais plutôt des descriptions ou des templates qui peuvent être implémentés dans divers langages de programmation. Ils aident les développeurs à concevoir des systèmes logiciels robustes, maintenables et évolutifs.
+
+Cet article n'a pas vocation à détailler tous les **design patterns** existants, mais plutôt à présenter ceux utilisés par **Panache ORM** dans **Quarkus** pour la gestion des entités et des opérations de persistance.
+
+<HR />
+
+## Les deux approches de Panache
+
+**Panache** propose deux approches principales pour définir les entités : l’approche **Active Record** et l’approche **Repository**. La première consiste à *étendre* une classe `@Entity` avec `PanacheEntity` ou `PanacheEntityBase`, tandis que la seconde utilise des classes de **repository** dédiées pour gérer les opérations sur les entités sans les étendre directement, mais en *implémentant* des interfaces `PanacheRepository` ou `PanacheRepositoryBase`.
+
+
+
+### L'Active Record
+
+```java "extends PanacheEntity"
+@Entity
+@Table(name = "astronauts")
+public class Astronaut extends PanacheEntity {
+    // Attributs et méthodes de l'entité
+}
+```
+
+Avec l'approche **Active Record** et l'extension de `PanacheEntity`, l'entité hérite automatiquement d'un identifiant de type `Long` nommé `id`. Vous n'avez donc pas besoin de définir explicitement un champ `id` dans votre classe d'entité, sauf si vous souhaitez personnaliser son comportement ou son type. Dans ce cas, vous pouvez utiliser `PanacheEntityBase` et définir votre propre champ `id`.
+
+```java {5,6} "extends PanacheEntityBase"
+@Entity
+@Table(name = "spaceships")
+public class Spaceship extends PanacheEntityBase {
+
+    @Id
+    private String shipCode; // Identifiant personnalisé
+    // Autres attributs et méthodes
+}
+```
+
+<HR />
+
+### Le Repository
+
+```java "implements PanacheRepository<Astronaut>"
+@Entity
+@Table(name = "astronauts")
+public class Astronaut {
+    // Attributs et méthodes de l'entité
+}
+
+@ApplicationScoped
+public class AstronautRepository implements PanacheRepository<Astronaut> {
+    // Méthodes de gestion des utilisateurs
+}
+```
+
+Avec l'approche **Repository**, vous devez définir explicitement un champ `id` dans votre classe d'entité, car <Underline>elle n'hérite pas automatiquement d'un identifiant</Underline>. Vous pouvez choisir le type et le nom du champ `id` selon vos besoins ; l'implémentation de `PanacheRepositoryBase` vous permet de spécifier le type de l'identifiant en tant que paramètre générique.
+
+C'est pourquoi, dans l'exemple ci-dessous, le repository `SpaceshipRepository` implémente `PanacheRepositoryBase<Spaceship, String>`, indiquant que l'entité `Spaceship` utilise un identifiant de type `String`. Cette approche permet surtout d'établir des repositories plus génériques et réutilisables entre plusieurs entités.
+
+<Aside type="tip">
+Dans la pratique, `PanacheRepository` est souvent suffisant.
+</Aside>
+
+```java {5,6} "implements PanacheRepositoryBase<Spaceship, String>"
+@Entity
+@Table(name = "spaceships")
+public class Spaceship {
+
+    @Id
+    private String shipCode; // Identifiant personnalisé
+    // Autres attributs et méthodes
+}
+
+@ApplicationScoped
+public class SpaceshipRepository implements PanacheRepositoryBase<Spaceship, String> {
+    // Méthodes de gestion des produits
+}
+```
+
+Pour les utilisations de générique, vous pouvez définir des **classes abstraites** pour vos repository afin de factoriser le code commun entre plusieurs entités partageant des caractéristiques similaires. Il sera ensuite possible de créer des repositories spécifiques en étendant ces classes abstraites. Par exemple :
+
+```java "abstract class" "extends GenericRepository<Astronaut, Long>"
+public abstract class GenericRepository<C, I> implements PanacheRepositoryBase<C, I> {
+    public C findByName(String name) {
+        return find("name", name).firstResult();
+    }
+}
+
+public class AstronautRepository extends GenericRepository<Astronaut, Long> {
+    // Méthodes spécifiques aux utilisateurs
+}
+```
+
+<Aside type="note">
+Ces classes générique sont abstraite puisque **Quarkus** ne peut pas instancier directement une classe dont le type concret n’est pas défini à la compilation.
+</Aside>
+
+<Aside type="caution">
+Elles doivent être utilisées avec précaution pour éviter une complexité excessive et garantir que le code reste lisible et maintenable.
+</Aside>
+
+<HR />
+
+### Concrètement comment choisir ?
+
+<CardGrid>
+  <Card title="Active Record" icon="right-caret">
+    Utile pour les applications simples ou les prototypes où la rapidité de développement est prioritaire. Elle permet d’écrire moins de code et de gérer les opérations directement dans les entités.
+  </Card>
+  <Card title="Repository" icon="right-caret">
+    Préférable pour les applications plus complexes ou lorsque l’on souhaite une séparation claire entre la logique métier et la persistance des données. Elle facilite les tests unitaires et la maintenance du code.
+  </Card>
+</CardGrid>
+
+
+<Aside type="tip">
+Le choix entre les deux approches dépend souvent de la complexité du projet et des préférences de l’équipe de développement, mais de manière générale, <Underline>l'approche **Repository** est préférable si l'on vise une architecture plus propre et maintenable sur le long terme</Underline>.
+
+C'est notamment le cas dans le **Domain-Driven Design (DDD)** / **Architecture hexagonale** où la séparation des préoccupations est essentielle.
+</Aside>
