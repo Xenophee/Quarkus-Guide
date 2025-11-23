@@ -1,4 +1,9 @@
-[aria-label="Note"] {
+
+[aria-label="Note"], [aria-label="Astuce"], [aria-label="Attention"], [aria-label="Danger"] {
+    @apply my-10
+}
+
+[aria-label="Note"], .starlight-aside--note {
     @apply bg-slate-300/50 dark:bg-slate-700/50 border-slate-400 dark:border-slate-500 ;
 
     & p {
@@ -10,7 +15,7 @@
     }
 }
 
-[aria-label="Astuce"] {
+[aria-label="Astuce"], .starlight-aside--tip {
     @apply bg-blue-300/30 dark:bg-blue-300/20 border-blue-400 dark:border-blue-300 ;
 
     & p {
@@ -22,8 +27,8 @@
     }
 }
 
-[aria-label="Attention"] {
-    @apply bg-pink-300/30 dark:bg-pink-700/30 border-pink-400 dark:border-pink-600;
+[aria-label="Attention"], .starlight-aside--caution {
+    @apply !bg-pink-300/30 dark:bg-pink-700/30 border-pink-400 dark:border-pink-600;
 
     & p {
         @apply text-pink-900 dark:text-pink-200;
@@ -34,7 +39,7 @@
     }
 }
 
-[aria-label="Danger"] {
+[aria-label="Danger"], .starlight-aside--danger {
     @apply bg-rose-500/30 dark:bg-rose-700/30 border-rose-500 dark:border-rose-700 ;
 
     & p {
@@ -80,4 +85,9 @@ a .note, div .note {
             @apply bg-transparent;
         }
     }
+}
+
+
+.icon {
+    @apply text-blue-600 dark:text-blue-300 !border-blue-600 dark:!border-blue-300 !bg-transparent ;
 }

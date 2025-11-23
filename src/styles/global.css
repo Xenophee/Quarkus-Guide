@@ -1,7 +1,10 @@
 @import "./aside-badge.css";
+@import "./others.css";
 
 @layer base, starlight, theme, components, utilities;
 
+@import "devicon/devicon.min.css";
+@import "remixicon/fonts/remixicon.css";
 @import '@astrojs/starlight-tailwind';
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
@@ -69,8 +72,17 @@ h1:not(.hero h1) {
     @apply text-transparent bg-gradient-to-tl from-rose-600 to-rose-800 dark:from-rose-300 dark:to-rose-500 bg-clip-text
 }
 
-h2:not(#starlight__on-this-page) {
-    @apply mb-14;
+.level-h2 {
+    @apply mb-14 p-5 border border-rose-600/20 dark:border-rose-300/40;
+    box-shadow: rgba(0, 0, 0, 0.06) 0px 2px 4px 0px inset;
+}
+
+.level-h3, .level-h4, .level-h5, .level-h6 {
+    @apply mb-10 p-3 border-b border-rose-600/40 dark:border-rose-300/40;
+
+    & i {
+        @apply text-rose-600/40 dark:text-rose-300 font-thin;
+    }
 }
 
 h2:not(#starlight__on-this-page), h3, h4, h5, h6 {
