@@ -1,0 +1,373 @@
+---
+title: Les bases
+description: Apprendre à effectuer des opérations CRUD simples avec Panache ORM dans Quarkus.
+sidebar:
+order: 4
+---
+
+import {Aside, TabItem, Tabs} from '@astrojs/starlight/components';
+import {Underline, HR} from '@components/index';
+
+
+Dans cet article, nous allons explorer comment effectuer des opérations CRUD (Create, Read, Update, Delete) simples en utilisant **Panache ORM** avec **Quarkus**. L’objectif est de comprendre le fonctionnement de base avant de passer à des concepts plus avancés.
+
+Les exemples fournis ici sont simples et visent à illustrer les concepts fondamentaux, mais il va sans dire que dans une application réelle, les choses se présentent souvent de manière plus complexe.
+
+
+## Création d'une entité
+
+Pour commencer, nous devons définir une entité qui représentera une table dans notre base de données. Voici un exemple d'entité `Astronaut` pour illustrer les opérations CRUD.
+
+<Tabs>
+    <TabItem label="Repository Pattern" icon="right-caret">
+
+        ```java
+        @Entity
+        @Table(name = "astronauts")
+        public class Astronaut {
+
+            @Id
+            @GeneratedValue(strategy = GenerationType.IDENTITY)
+            private Long id;
+
+            private String name;
+
+            private String email;
+
+            // Getters et Setters
+
+        }
+        ```
+
+        Puis la classe **repository** associée :
+
+        ```java
+        @ApplicationScoped
+        public class AstronautRepository implements PanacheRepository<Astronaut> {
+        // Méthodes CRUD personnalisées peuvent être ajoutées ici si nécessaire
+        }
+        ```
+
+    </TabItem>
+
+    <TabItem label="Active Record Pattern" icon="right-caret">
+
+        ```java
+        @Entity
+        @Table(name = "astronauts")
+        public class Astronaut extends PanacheEntity {
+
+            private String name;
+
+            private String email;
+
+            // Getters et Setters
+
+    }
+        ```
+    </TabItem>
+</Tabs>
+
+<Aside type="note">
+    L'une et l'autre approche confèrent l'accès aux mêmes **méthodes CRUD**, mais la manière de les utiliser diffère
+    légèrement.
+</Aside>
+
+<HR/>
+
+
+## Opérations CRUD
+
+La différence principale entre l'utilisation de **Panache** en mode **Active Record** et en mode **Repository** réside dans la manière dont nous effectuons l'appel des opérations CRUD. Dans le premier cas, les méthodes sont appelées directement sur l'instance de l'entité, tandis que dans le second cas, elles sont appelées via une classe repository dédiée.
+
+
+### <i class="ri-file-add-line"></i> Création (Create)
+
+Pour créer une nouvelle instance de `Astronaut` et la sauvegarder dans la base de données, nous utilisons la méthode `persist()` :
+
+<Tabs>
+    <TabItem label="Repository Pattern" icon="right-caret">
+
+        ```java
+        Astronaut astro = new Astronaut();
+        astro.setName("Ripley");
+        astro.setEmail("arsouilleur@mail.cloud");
+
+        astronautRepository.persist(astro);
+        ```
+
+        <Aside type="tip">
+            La méthode `persist()` n’entraîne pas une insertion immédiate dans la base de données.
+            <Underline>L’écriture réelle n’a lieu qu’au moment où la **transaction** en cours est validée.</Underline>
+            Ce fonctionnement permet derrière à **JPA/Hibernate** d’optimiser les performances, notamment en regroupant
+            plusieurs opérations en une seule interaction avec la base.
+
+            Si nécessaire, la méthode `persistAndFlush()` peut être utilisée pour forcer la synchronisation immédiate
+            de l’état de l’entité avec la base de données. Cependant, son usage doit rester exceptionnel :
+            appelée trop fréquemment, <Underline>elle peut dégrader les performances et compliquer la gestion
+            transactionnelle.</Underline>
+
+            Vous pouvez aussi réaliser un `flush()` manuel si besoin.
+        </Aside>
+
+    </TabItem>
+
+    <TabItem label="Active Record Pattern" icon="right-caret">
+
+        ```java
+        Astronaut astro = new Astronaut();
+        astro.setName("Ripley");
+        astro.setEmail("arsouilleur@mail.cloud");
+        astro.persist();
+        ```
+
+        <Aside type="tip">
+            La méthode `persist()` n’entraîne pas une insertion immédiate dans la base de données.
+            <Underline>L’écriture réelle n’a lieu qu’au moment où la **transaction** en cours est validée.</Underline>
+            Ce fonctionnement permet derrière à **JPA/Hibernate** d’optimiser les performances, notamment en regroupant
+            plusieurs opérations en une seule interaction avec la base.
+
+            Si nécessaire, la méthode `persistAndFlush()` peut être utilisée pour forcer la synchronisation immédiate
+            de l’état de l’entité avec la base de données. Cependant, son usage doit rester exceptionnel :
+            appelée trop fréquemment, <Underline>elle peut dégrader les performances et compliquer la gestion
+            transactionnelle.</Underline>
+
+            Vous pouvez aussi réaliser un `flush()` manuel via l’`EntityManager` si besoin comme suit :
+
+            ```java
+            Astronaut.getEntityManager().flush();
+            ```
+        </Aside>
+
+    </TabItem>
+</Tabs>
+
+<Aside type="caution">
+    Pour éviter les erreurs telles que `TransactionRequiredException` ou `No session`,
+    assurez-vous que vos opérations de création sont exécutées au sein d’un contexte
+    de persistance actif. En pratique, cela signifie que la création d'une ressource doit
+    être effectué dans une méthode annotée `@Transactional`, afin que l’entité soit
+    correctement gérée par l’`EntityManager`.
+</Aside>
+
+
+
+
+### <i class="ri-search-line"></i> Lecture (Read)
+
+<Tabs>
+    <TabItem label="Repository Pattern" icon="right-caret">
+
+        **Pour récupérer tous les astronautes :**
+
+        ```java
+        List<Astronaut> astronauts = astronautRepository.listAll();
+        ```
+        <hr/>
+
+        **Pour trouver un astronaute par son ID :**
+
+        ```java
+        Astronaut astro = astronautRepository.findById(1L);
+        ```
+        <hr/>
+
+        **Pour trouver un astronaute par son ID avec gestion des cas `NULL` via un `Optional` :**
+
+        ```java
+        Optional<Astronaut> astro = astronautRepository.findByIdOptional(1L);
+            ```
+            <hr/>
+
+            **Pour compter le nombre total d'astronautes :**
+
+            ```java
+            long count = astronautRepository.count();
+            ```
+            <hr/>
+
+    </TabItem>
+
+    <TabItem label="Active Record Pattern" icon="right-caret">
+
+        **Pour récupérer tous les astronautes :**
+
+        ```java
+        List<Astronaut> astronauts = Astronaut.listAll();
+        ```
+        <hr/>
+
+        **Pour trouver un astronaute par son ID :**
+
+        ```java
+        Astronaut astro = Astronaut.findById(1L);
+        ```
+        <hr/>
+
+        **Pour trouver un astronaute par son ID avec gestion des cas `NULL` via un `Optional` :**
+
+        ```java
+        Optional<Astronaut> astro = Astronaut.findByIdOptional(1L);
+            ```
+            <hr/>
+
+            **Pour compter le nombre total d'astronautes :**
+
+            ```java
+            long count = Astronaut.count();
+            ```
+
+    </TabItem>
+</Tabs>
+
+<Aside type="caution">
+    Les méthodes comme `listAll()` sont utiles pour les démonstrations,
+    mais elles ne sont pas optimisées pour les tables volumineuses. Par exemple,
+    `listAll()` effectue un `SELECT *` complet, ce qui peut rapidement devenir coûteux.
+    <Underline>Dans une application réelle, il est préférable d'utiliser des requêtes filtrées,
+        paginées ou des projections</Underline>. Ces bonnes pratiques seront abordées dans les sections suivantes.
+</Aside>
+
+
+
+
+### <i class="ri-edit-2-line"></i> Mise à jour (Update)
+
+<Tabs>
+    <TabItem label="Repository Pattern" icon="right-caret">
+
+        **Pour mettre à jour un astronaute :**
+
+        ```java
+        Astronaut astro = astronautRepository.findById(1L);
+        astro.setEmail("arsouilleurEnChef@mail.cloud")
+        ```
+
+    </TabItem>
+
+    <TabItem label="Active Record Pattern" icon="right-caret">
+
+        **Pour mettre à jour un astronaute :**
+
+        ```java
+        Astronaut astro = Astronaut.findById(1L);
+        astro.setEmail("arsouilleurEnChef@mail.cloud")
+        ```
+
+    </TabItem>
+</Tabs>
+
+Et c'est tout ! En **Panache**, il n'est pas nécessaire d'appeler une méthode spécifique pour sauvegarder les modifications apportées à une entité. Une fois que vous avez modifié les propriétés de l'entité récupérée, les changements sont automatiquement suivis et persistés dans la base de données lors de la **transaction** en cours.
+
+Cela est rendu possible grâce au mécanisme de **dirty checking** de JPA, qui détecte les modifications apportées aux entités gérées et génère les **requêtes SQL** appropriées pour mettre à jour la base de données lorsque la **transaction** est validée.
+
+<Aside type="caution">
+    Pour éviter des erreurs telles que `TransactionRequiredException` ou des entités non suivies, assurez-vous que la
+    récupération et la modification de l'entité se font dans la **même transaction**.
+    Dans la pratique, cela signifie que votre méthode de mise à jour doit être annotée avec `@Transactional`.
+</Aside>
+
+<Aside type="tip">
+    Dans un autre article, nous aborderons une autre manière de mettre à jour des entités en évitant de les récupérer au
+    préalable, ce qui peut être plus performant.
+</Aside>
+
+
+
+### <i class="ri-delete-bin-6-line"></i> Suppression (Delete)
+
+
+<Tabs>
+    <TabItem label="Repository Pattern" icon="right-caret">
+
+        **Cas de suppression sur une instance récupérée :**
+
+        ```java
+        Astronaut astro = astronautRepository.findByIdOptional(1L)
+            .orElseThrow(() -> new NotFoundException("Astronaute non trouvé"));
+
+        astronautRepository.delete(astro);
+        ```
+        <Aside type="caution">
+            Pour éviter toute erreur liée au contexte de persistance, assurez-vous que les opérations de suppression
+            se déroulent dans une **transaction active**. En pratique, annotez la méthode contenant la logique de
+            suppression avec `@Transactional`.
+        </Aside>
+
+        <hr/>
+
+        **Cas de suppression sur l'entité directement via son ID :**
+
+        ```java
+        boolean deleted = astronautRepository.deleteById(1L);
+
+        if (!deleted) throw new NotFoundException("Astronaute non trouvé");
+        ```
+
+        <hr/>
+
+        **Cas de suppression de tous les astronautes :**
+
+        ```java
+        long deletedCount = astronautRepository.deleteAll();
+        ```
+
+    </TabItem>
+
+    <TabItem label="Active Record Pattern" icon="right-caret">
+
+        **Cas de suppression sur une instance récupérée :**
+
+        ```java
+        Astronaut astro = Astronaut.findByIdOptional(1L)
+            .orElseThrow(() -> new NotFoundException("Astronaute non trouvé"));
+
+        astro.delete();
+        ```
+        <Aside type="caution">
+            Pour éviter toute erreur liée au contexte de persistance, assurez-vous que les opérations de suppression
+            se déroulent dans une **transaction active**. En pratique, annotez la méthode contenant la logique de
+            suppression avec `@Transactional`.
+        </Aside>
+
+        <hr/>
+
+        **Cas de suppression sur l'entité directement via son ID :**
+
+        ```java
+        boolean deleted = Astronaut.deleteById(1L);
+
+        if (!deleted) throw new NotFoundException("Utilisateur non trouvé");
+        ```
+
+        <hr/>
+
+        **Cas de suppression de tous les astronautes :**
+
+        ```java
+        long deletedCount = Astronaut.deleteAll();
+        ```
+
+        <hr/>
+
+        <Aside type="note">
+            La méthode `deleteById` et `deleteAll()` sont appelés directement sur la classe de l'entité et non sur une
+            instance.
+        </Aside>
+
+    </TabItem>
+
+</Tabs>
+
+<hr/>
+
+<Aside type="note">
+    Notez que les méthodes de suppression retournent un **booléen** ou un **compte** indiquant si la suppression a
+    réussi ou combien d'entités ont été supprimées, ce qui est utile pour la gestion des erreurs. Seul `delete()` ne
+    retourne rien.
+</Aside>
+
+<Aside type="tip">
+    Pour optimiser les performances, utilisez de préférence la méthode `deleteById` lorsque vous n'avez pas besoin de
+    charger l'entité avant de la supprimer. Cela évite une requête supplémentaire.
+</Aside>

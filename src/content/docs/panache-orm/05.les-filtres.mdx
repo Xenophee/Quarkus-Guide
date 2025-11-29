@@ -1,9 +1,10 @@
 ---
-title: Les bases avancées
+title: Les filtres
 description: Approfondir les opérations CRUD avec Panache ORM dans Quarkus avec les filtres.
 sidebar:
-    order: 4
+    order: 5
 ---
+
 
 import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 import { Underline, HR } from '@components/index';
@@ -64,6 +65,12 @@ Le premier est plus simple à utiliser, mais requiert de faire attention à l'or
 
 <Aside type="tip">
 Les bonnes pratiques recommandent d'utiliser les **paramètres nommés** pour des requêtes complexes.
+</Aside>
+
+<Aside type="caution">
+    L'écriture des paramètres dans les **ORM** se basent sur les **entités** et leurs **attributs**, et non sur les noms des colonnes en base de données. <Underline>Assurez-vous d'utiliser les noms des attributs tels qu'ils sont définis dans la classe de l'entité.</Underline>
+
+    Par exemple, si l'attribut dans l'entité est `healthPoints`, utilisez ce nom dans vos filtres, même si la colonne en base de données s'appelle `health_points`.
 </Aside>
 
 
