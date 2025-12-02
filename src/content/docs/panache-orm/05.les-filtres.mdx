@@ -115,7 +115,7 @@ Pour lire des entités en utilisant des filtres, vous pouvez utiliser la méthod
 </Tabs>
 
 <Aside type="tip">
-Pour éviter les erreurs de type `NoResultException`, il est recommandé d'utiliser la méthode `firstResultOptional()` qui renvoie un `Optional<Alien>`. Cela permet de gérer plus facilement et plus proprement les cas où aucun résultat n'est trouvé.
+Pour éviter les erreurs de type `NullPointerException` lorsque vous manipulez le résultat, il est recommandé d'utiliser la méthode `firstResultOptional()` qui renvoie un `Optional<Alien>`. Cela permet de gérer plus facilement et plus proprement les cas où aucun résultat n'est trouvé.
 </Aside>
 
 

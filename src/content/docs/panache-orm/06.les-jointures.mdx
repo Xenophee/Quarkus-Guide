@@ -1,0 +1,374 @@
+---
+title: Les jointures
+description: Utiliser les jointures avec Panache ORM dans Quarkus.
+sidebar:
+    order: 6
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Underline, HR } from '@components/index';
+
+
+## Rappel sur les jointures
+
+Une **jointure** est une opération en base de données qui permet de combiner des lignes de deux ou plusieurs **tables** en fonction d'une condition liée entre elles. Les **jointures** sont essentielles pour interroger des données réparties sur plusieurs **tables relationnelles**.
+
+Les types de jointures les plus courants sont :
+
+- **INNER JOIN** : Retourne les lignes qui ont des correspondances dans les deux tables.
+- **LEFT JOIN** : Retourne toutes les lignes de la table de gauche et les lignes correspondantes de la table de droite. Si aucune correspondance n'existe, les résultats de la table de droite seront NULL.
+- **RIGHT JOIN** : Retourne toutes les lignes de la table de droite et les lignes correspondantes de la table de gauche. Si aucune correspondance n'existe, les résultats de la table de gauche seront NULL.
+- **FULL JOIN** : Retourne toutes les lignes lorsque qu'il y a une correspondance dans l'une ou l'autre des tables.
+
+<Aside type="note">
+    `INNER JOIN` est souvent indiqué dans sa forme raccourcie `JOIN`. Il s'agit du type de jointure par défaut lorsque le type n'est pas spécifié, et c'est la forme de la plus couramment utilisée.
+</Aside>
+
+<HR />
+
+
+
+## Définition des entités
+
+Contrairement aux simplifications apportées sur les opérations filtrées par **Panache**, les jointures nécessitent une approche plus explicite. Les relations entre les **entités** doivent être préalablement définies correctement à l'aide des annotations **JPA** telles que `@OneToMany`, `@ManyToOne`, `@OneToOne`, et `@ManyToMany`. Ensuite, les jointures peuvent être utilisées dans les requêtes pour récupérer des données liées en utilisant **JPQL** (*Java Persistence Query Language*).
+
+Supposons que nous ayons deux entités : `Astronaut`, `Ship` et `Alien`, où un astronaute est assigné à un vaisseau. Un astronaute peut également être l'hôte d'un alien. Incidement, un alien peut aussi être assigné à un vaisseau que ça soit ou non via un astronaute.
+
+Voici comment nous pourrions définir ces entités :
+
+1. **Pour les astronautes** :
+
+```java
+@Entity
+@Table(name = "astronauts")
+public class Astronaut {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "ship_id", nullable = false)
+    private Ship ship;
+
+    @OneToOne(fetch = FetchType.LAZY, mappedBy = "host")
+    private Alien alien;
+
+    // getters et setters
+
+}
+```
+
+2. **Pour les vaisseaux** :
+
+```java
+@Entity
+@Table(name = "ships")
+public class Ship {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+
+    @OneToMany(mappedBy = "ship", fetch = FetchType.LAZY)
+    private List<Astronaut> astronauts = new ArrayList<>();
+
+    @OneToMany(mappedBy = "ship", fetch = FetchType.LAZY)
+    private List<Alien> aliens = new ArrayList<>();
+
+    // getters et setters
+
+}
+```
+
+3. **Pour les aliens** :
+
+```java
+@Entity
+public class Alien {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String codename;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "ship_id", nullable = true)
+    private Ship ship;
+
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "astronaut_id", nullable = false, unique = true)
+    private Astronaut host;
+
+    // getters et setters
+
+}
+```
+
+<HR />
+
+## Opérations de lecture
+
+### Exemple avec JPQL
+
+Avec ces entités définies, nous pouvons effectuer des jointures dans nos requêtes **JPQL**.
+
+Par exemple, pour récupérer tous les astronautes avec leurs vaisseaux respectifs :
+
+```java
+List<Astronaut> astronautsWithShips = Astronaut.find(
+    "SELECT a FROM Astronaut a JOIN FETCH a.ship"
+).list();
+```
+
+`a` représente chaque astronaute, et `a.ship` fait référence au vaisseau associé à cet astronaute. Il s'agit d'un alliasing standard en **JPQL**. Comme tout est récupéré, `a` contiendra les informations de l'astronaute ainsi que celles de son vaisseau.
+
+Comme les données associées sont en `fetch = FetchType.LAZY`, l'utilisation du mot clef `FETCH` après le `JOIN` est indispensable pour éviter le fameux problème du **N+1**. Cela garantit que les données du vaisseau sont chargées en même temps que les astronautes, réduisant ainsi le nombre total de requêtes exécutées à la base de données.
+
+Les cas **N+1** surviennent lorsque chaque entité principale (ici, chaque astronaute) déclenche une requête supplémentaire pour charger ses entités associées (ici, les vaisseaux). Par exemple, si nous avons 10 astronautes, sans `JOIN FETCH`, cela pourrait entraîner 1 requête pour récupérer les astronautes et 10 requêtes supplémentaires pour récupérer les vaisseaux associés, totalisant 11 requêtes. Avec `JOIN FETCH`, une seule requête est effectuée pour récupérer à la fois les astronautes et leurs vaisseaux, améliorant ainsi considérablement les performances. Ce phénomène survient lorsqu'on cherche à accéder aux entités associées qui sont configurées pour un chargement paresseux (`LAZY`).
+
+
+<Aside type="danger" title="À ne pas faire !">
+    Par exemple :
+
+    ```java
+    List<Astronaut> astronauts = astronautRepository.findAll().list();
+
+    for (Astronaut astronaut : astronauts) {
+        System.out.println(astronaut.getShip().getName());
+    }
+    ```
+
+    Dans cet exemple, chaque appel à `astronaut.getShip()` déclenche une requête supplémentaire pour charger le vaisseau de chaque astronaute, ce qui peut entraîner un grand nombre de requêtes si la liste des astronautes est longue.
+
+    Autant vous dire que vous pourrez vite vous retrouver en panne de carburant et dans l'espace personne ne vous entend crier...
+</Aside>
+
+
+
+
+De même, pour récupérer tous les astronautes qu'il soit hôte ou non d'un alien et sur le vaisseaux nommé *Nostromo* :
+
+```java
+List<Astronaut> astronautsWithAliens = astronautRepository.find("""
+        SELECT a FROM Astronaut a
+        LEFT JOIN FETCH a.alien
+        JOIN FETCH a.ship s
+        WHERE s.name = :shipName
+    """, Parameters.with("shipName", "Nostromo")).list();
+```
+
+Ici, nous utilisons une **jointure gauche** (`LEFT JOIN FETCH`) pour inclure les aliens associés aux astronautes, même si certains astronautes n'ont pas d'alien hôte. Nous utilisons également une **jointure interne** (`JOIN FETCH`) pour filtrer les astronautes en fonction du nom de leur vaisseau.
+
+<Aside type="tip">
+    Pour les requêtes longues, l'utilisation de la syntaxe `"""` (text block) en **Java** permet d'améliorer la lisibilité du code en évitant les concaténations de chaînes de caractères.
+</Aside>
+
+
+
+### Limites et considérations
+
+L'écriture des requêtes directement dans une méthode `find()` peut devenir rapidement complexe et difficile à maintenir pour des requêtes avec de nombreuses jointures ou des conditions complexes. Du fait que le paramètre de la méthode `find()` est une simple chaîne de caractères, il n'y a pas de vérification de syntaxe à la compilation, ce qui peut entraîner des erreurs au moment de l'exécution si la requête est mal formée.
+
+Dans ces cas, il peut être préférable d'utiliser des **Named Queries** ou de recourir à l'`EntityManager` pour une gestion plus fine des requêtes.
+
+<HR />
+
+## Opérations de persistence
+
+Lorsque vous travaillez avec des entités liées par des jointures, il est important de gérer correctement les opérations de persistance (création, mise à jour, suppression) pour maintenir l'intégrité des données. Par exemple, lors de la création d'un nouvel astronaute, vous devez vous assurer que le vaisseau associé existe déjà dans la base de données.
+
+
+### Création
+
+Lors de la création d'un astronaute avec un vaisseau existant, vous devez d'abord récupérer le vaisseau, puis associer l'astronaute à ce vaisseau avant de persister l'astronaute puisque ce dernier dépend de l'existence du vaisseau.
+
+#### Récupération de l'entité associée
+
+Voici un exemple :
+
+```java
+@Transactional
+public void createAstronaut(String name, Long shipId) {
+
+    Ship ship = shipRepository.findByIdOptional(shipId);
+        .orElseThrow(() -> new NotFoundException("Vaisseau non trouvé"));
+
+    Astronaut astro = new Astronaut();
+    astro.setName(name);
+    astro.setShip(ship);
+    astronautRepository.persist();
+
+}
+```
+
+Ici, nous récupérons d'abord le vaisseau existant avant de créer l'astronaute et de l'associer à ce vaisseau. Cela garantit que la relation entre les entités est correctement établie.
+
+<Aside type="caution">
+    Bien qu'elle fonctionne, cette approche suppose de charger l'entité `Ship` depuis la base de données, ce qui peut être inefficace si vous n'avez besoin que de son identifiant pour établir la relation.
+</Aside>
+
+
+#### Utilisation d'une référence proxy
+
+Pour éviter les chargement inutiles, vous pouvez utiliser une **référence proxy** à l'entité `Ship` sans la charger complètement. Ceci peut être fait en utilisant la méthode `getReference()` de l'`EntityManager`. Voici comment vous pouvez le faire :
+
+```java
+Ship ship = shipRepository.getEntityManager().getReference(Ship.class, shipId);
+
+Astronaut astro = new Astronaut();
+astro.setName(name);
+astro.setShip(ship);
+astronautRepository.persist();
+```
+
+Cela crée une référence à l'entité `Ship` basée sur son identifiant, sans charger ses données depuis la base de données, ce qui peut améliorer les performances.
+
+<Aside type="caution">
+    La récupération de la référence proxy ne vérifie pas si l'identifiant existe réellement dans la base de données. Si vous essayez de persister l'astronaute avec un identifiant de vaisseau inexistant, une exception sera levée lors de la tentative d'insertion dans la base de données.
+</Aside>
+
+<Aside type="tip">
+    Pensez à vérifier l'existence de l'entité associée avant d'utiliser `getReference()` si vous n'êtes pas certain que l'identifiant est valide. Pour ce faire, vous pouvez tous simplement créer une méthode de validation qui vérifie l'existence de l'entité avant de procéder à la création.
+
+    Par exemple :
+
+    ```java title="ShipRepository.java"
+    public boolean exists(Long id) return count("id", id) > 0;
+    ```
+
+    et l'utiliser ainsi :
+
+    ```java title="AstronautService.java"
+    if (!shipRepository.exists(shipId)) {
+        throw new NotFoundException("Vaisseau non trouvé");
+    }
+    ```
+</Aside>
+
+<HR />
+
+
+### Mise à jour
+
+
+#### Récupération de l'entité
+
+Pour mettre à jour un astronaute et son vaisseau associé, vous devez d'abord récupérer l'astronaute, ainsi que le nouveau vaisseau, puis mettre à jour les différentes propriétés avant de persister les modifications.
+
+```java
+@Transactional
+public void updateAstronaut(Long id, AstronautUpsert astronautUpdate) {
+
+    Astronaut astro = astronautRepository.findByIdOptional(id)
+        .orElseThrow(() -> new NotFoundException("Astronaute non trouvé"));
+
+    Ship newShip = shipRepository.findByIdOptional(astronautUpdate.shipId)
+        .orElseThrow(() -> new NotFoundException("Vaisseau non trouvé"));
+
+    astro.setName(astronautUpdate.name);
+    astro.setShip(newShip);
+}
+```
+
+<Aside type="note">
+    Comme déjà spécifié dans le chapitre sur les bases de Panache, il n'est pas nécessaire d'appeler explicitement une méthode de mise à jour ou de persistance après avoir modifié les propriétés d'une entité gérée. Grâce au mécanisme de **dirty checking** d'**Hibernate**, les modifications seront automatiquement détectées et synchronisées avec la base de données lors du commit de la transaction.
+</Aside>
+
+
+#### Utilisation d'une référence proxy
+
+Pour éviter de charger complètement le nouveau vaisseau, vous pouvez utiliser une référence proxy comme suit :
+
+```java
+@Transactional
+public void updateAstronaut(Long id, AstronautUpsert astronautUpdate) {
+
+    Astronaut astro = astronautRepository.findByIdOptional(id)
+        .orElseThrow(() -> new NotFoundException("Astronaute non trouvé"));
+
+    Ship newShip = shipRepository.getEntityManager().getReference(Ship.class, astronautUpdate.shipId);
+
+    astro.setName(astronautUpdate.name);
+    astro.setShip(newShip);
+}
+```
+
+Dans cet exemple, nous ne chargons que l'astronaute depuis la base de données, tandis que le nouveau vaisseau est référencé par son identifiant sans être entièrement chargé.
+
+Vous pouvez également aller plus loin en utilisant la méthode `update()` de **Panache** pour éviter de charger l'astronaute si vous n'avez pas besoin de ses autres propriétés.
+
+```java
+@Transactional
+public void updateAstronaut(Long id, AstronautUpsert astronautUpdate) {
+
+    Ship newShip = shipRepository.getEntityManager().getReference(Ship.class, astronautUpdate.shipId);
+
+    astronautRepository.update(
+        "name = :name, ship = :ship where id = :id",
+        Parameters.with("name", astronautUpdate.name)
+                  .and("ship", newShip)
+                  .and("id", id)
+    );
+}
+```
+
+<Aside type="tip">
+
+</Aside>
+
+
+<HR />
+
+### Suppression
+
+Lors de la suppression d'un astronaute, vous devez également gérer les relations avec les entités associées, notamment si vous n'avez pas défini de contrainte particulière de suppression en cascade dans vos entités et vos bases de données. Par exemple, si un vaisseau contient des astronautes, vous devez décider comment gérer cette relation lors de la suppression d'un vaisseau.
+
+#### Récupération de l'entité
+
+Voici un exemple de suppression d'un vaisseau et de tous ses astronautes associés :
+
+```java
+@Transactional
+public void deleteShip(Long shipId) {
+
+    Ship ship = shipRepository.findByIdOptional(shipId)
+        .orElseThrow(() -> new NotFoundException("Vaisseau non trouvé"));
+
+    // Suppression des astronautes selon le vaisseau
+    astronautRepository.delete("ship", ship);
+
+    // Suppression du vaisseau
+    shipRepository.delete(ship);
+}
+```
+
+Ici, nous supprimons d'abord tous les astronautes associés au vaisseau avant de supprimer le vaisseau lui-même pour éviter les violations de contraintes d'intégrité référentielle. En fonction de votre modèle de données et des règles métier, vous pouvez adapter cette logique pour gérer les relations de manière appropriée lors des opérations de suppression.
+
+<Aside type="caution">
+Dans cet exemple, l'entité `Ship` est entièrement chargée avant la suppression. Ceci peut être inefficace si vous n'avez besoin que de son identifiant pour effectuer la suppression et que vous n'avez pas besoin d'exécuter de logique métier supplémentaire basée sur les données de l'entité. Vous pouvez optimiser cela en utilisant une **référence proxy** comme mentionné précédemment.
+</Aside>
+
+
+#### Utilisation d'une référence proxy
+
+```java
+@Transactional
+public void deleteShip(Long shipId) {
+    Ship ship = shipRepository.getEntityManager().getReference(Ship.class, shipId);
+    // Suppression des astronautes selon le vaisseau
+    astronautRepository.delete("ship", ship);
+    // Suppression du vaisseau
+    shipRepository.delete(ship);
+}
+```
+
+
+<Aside type="tip">
+    Si vous avez configuré des règles de suppression en cascade dans vos entités, cette étape peut être automatisée. Pensez donc bien à définir ces règles en fonction de vos besoins métier afin de vous faciliter la vie lors des opérations de suppression. Avec une bonne configuration, vous pouvez simplement vérifier l'existence de l'entité parente et la supprimer après avec un `deleteById()`, et les entités enfants seront automatiquement supprimées en cascade.
+</Aside>
