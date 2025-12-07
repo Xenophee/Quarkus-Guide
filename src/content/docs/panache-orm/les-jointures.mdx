@@ -38,7 +38,7 @@ Voici comment nous pourrions définir ces entités :
 
 1. **Pour les astronautes** :
 
-```java
+```java title="Astronaut.java"
 @Entity
 @Table(name = "astronauts")
 public class Astronaut {
@@ -63,7 +63,7 @@ public class Astronaut {
 
 2. **Pour les vaisseaux** :
 
-```java
+```java title="Ship.java"
 @Entity
 @Table(name = "ships")
 public class Ship {
@@ -87,7 +87,7 @@ public class Ship {
 
 3. **Pour les aliens** :
 
-```java
+```java title="Alien.java"
 @Entity
 public class Alien {
 
@@ -120,10 +120,10 @@ Avec ces entités définies, nous pouvons effectuer des jointures dans nos requ�
 
 Par exemple, pour récupérer tous les astronautes avec leurs vaisseaux respectifs :
 
-```java
-List<Astronaut> astronautsWithShips = Astronaut.find(
-    "SELECT a FROM Astronaut a JOIN FETCH a.ship"
-).list();
+```java title="AstronautRepository.java"
+public List<Astronaut> findAstronautsWithShips() {
+    return find("SELECT a FROM Astronaut a JOIN FETCH a.ship").list();
+}
 ```
 
 `a` représente chaque astronaute, et `a.ship` fait référence au vaisseau associé à cet astronaute. Il s'agit d'un alliasing standard en **JPQL**. Comme tout est récupéré, `a` contiendra les informations de l'astronaute ainsi que celles de son vaisseau.
@@ -154,13 +154,16 @@ Les cas **N+1** surviennent lorsque chaque entité principale (ici, chaque astro
 
 De même, pour récupérer tous les astronautes qu'il soit hôte ou non d'un alien et sur le vaisseaux nommé *Nostromo* :
 
-```java
-List<Astronaut> astronautsWithAliens = astronautRepository.find("""
-        SELECT a FROM Astronaut a
-        LEFT JOIN FETCH a.alien
-        JOIN FETCH a.ship s
-        WHERE s.name = :shipName
-    """, Parameters.with("shipName", "Nostromo")).list();
+```java title="AstronautRepository.java"
+public List<Astronaut> findAstronautsWithAliensOnNostromo() {
+    return find("""
+                    SELECT a FROM Astronaut a
+                    LEFT JOIN FETCH a.alien
+                    JOIN FETCH a.ship s
+                    WHERE s.name = :shipName
+                """,
+            Parameters.with("shipName", "Nostromo")).list();
+}
 ```
 
 Ici, nous utilisons une **jointure gauche** (`LEFT JOIN FETCH`) pour inclure les aliens associés aux astronautes, même si certains astronautes n'ont pas d'alien hôte. Nous utilisons également une **jointure interne** (`JOIN FETCH`) pour filtrer les astronautes en fonction du nom de leur vaisseau.
@@ -192,7 +195,7 @@ Lors de la création d'un astronaute avec un vaisseau existant, vous devez d'abo
 
 Voici un exemple :
 
-```java
+```java title="AstronautService.java"
 @Transactional
 public void createAstronaut(String name, Long shipId) {
 
@@ -261,7 +264,7 @@ Cela crée une référence à l'entité `Ship` basée sur son identifiant, sans 
 
 Pour mettre à jour un astronaute et son vaisseau associé, vous devez d'abord récupérer l'astronaute, ainsi que le nouveau vaisseau, puis mettre à jour les différentes propriétés avant de persister les modifications.
 
-```java
+```java title="AstronautService.java"
 @Transactional
 public void updateAstronaut(Long id, AstronautUpsert astronautUpdate) {
 
@@ -292,7 +295,8 @@ public void updateAstronaut(Long id, AstronautUpsert astronautUpdate) {
     Astronaut astro = astronautRepository.findByIdOptional(id)
         .orElseThrow(() -> new NotFoundException("Astronaute non trouvé"));
 
-    Ship newShip = shipRepository.getEntityManager().getReference(Ship.class, astronautUpdate.shipId);
+    Ship newShip = shipRepository.getEntityManager()
+        .getReference(Ship.class, astronautUpdate.shipId);
 
     astro.setName(astronautUpdate.name);
     astro.setShip(newShip);
@@ -307,10 +311,10 @@ Vous pouvez également aller plus loin en utilisant la méthode `update()` de **
 @Transactional
 public void updateAstronaut(Long id, AstronautUpsert astronautUpdate) {
 
-    Ship newShip = shipRepository.getEntityManager().getReference(Ship.class, astronautUpdate.shipId);
+    Ship newShip = shipRepository.getEntityManager()
+        .getReference(Ship.class, astronautUpdate.shipId);
 
-    astronautRepository.update(
-        "name = :name, ship = :ship where id = :id",
+    astronautRepository.update("name = :name, ship = :ship where id = :id",
         Parameters.with("name", astronautUpdate.name)
                   .and("ship", newShip)
                   .and("id", id)
@@ -318,8 +322,26 @@ public void updateAstronaut(Long id, AstronautUpsert astronautUpdate) {
 }
 ```
 
-<Aside type="tip">
+#### Choix de l'approche
 
+- **Charger l'entité puis modifier ses propriétés** :
+Idéal quand vous avez besoin de lire ou valider d'autres informations de l'entité avant de la modifier.
+C'est l’approche la plus simple, la plus claire et la plus sûre — **Hibernate** s'occupe de tout grâce au **dirty checking**.
+
+- **Utiliser `getReference()`** :
+Parfait lorsque vous connaissez l’ID du vaisseau et que vous n’avez pas besoin de charger ses données.
+Cela évite un aller-retour inutile en base, tout en gardant un code 100% cohérent avec le modèle objet.
+
+- **Utiliser `update()` de Panache** :
+La meilleure option quand vous ne voulez pas charger l’astronaute du tout.
+Cette approche est optimale pour les mises à jour simples et ciblées (édition d’un nom, changement de relation, etc.).
+Attention toutefois : comme l’entité n’est pas chargée, vous ne bénéficiez ni du dirty checking, ni de validations liées à l’état actuel de l’objet.
+
+<Aside type="note">
+    En résumé :
+    - Lisibilité → chargement + dirty checking
+    - Performance légère → `getReference()`
+    - Performance maximale → `update()` direct
 </Aside>
 
 
@@ -360,7 +382,8 @@ Dans cet exemple, l'entité `Ship` est entièrement chargée avant la suppressio
 ```java
 @Transactional
 public void deleteShip(Long shipId) {
-    Ship ship = shipRepository.getEntityManager().getReference(Ship.class, shipId);
+    Ship ship = shipRepository.getEntityManager()
+        .getReference(Ship.class, shipId);
     // Suppression des astronautes selon le vaisseau
     astronautRepository.delete("ship", ship);
     // Suppression du vaisseau

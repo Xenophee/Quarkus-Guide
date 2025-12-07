@@ -1,0 +1,145 @@
+---
+title: Les named queries
+description: Utiliser les named queries avec Panache ORM dans Quarkus.
+sidebar:
+    order: 7
+---
+
+import {Aside, Tabs, TabItem} from '@astrojs/starlight/components';
+import {Underline, HR} from '@components/index';
+
+
+Les **named queries** sont des requêtes prédéfinies que vous pouvez définir dans vos **entités JPA**. Elles permettent de réutiliser des requêtes courantes sans avoir à les réécrire à chaque fois. Elles sont particulièrement utiles pour les requêtes complexes ou fréquemment utilisées.
+
+L'avantage des **named queries** est qu'elles sont compilées au démarrage de l'application, ce qui peut améliorer les performances du fait de la validation anticipée des requêtes.
+
+
+## Définir une named query
+
+Les **named queries** peuvent être définies à l'aide de l'annotation `@NamedQuery` sur une entité. Voici un exemple de définition d'une **named query** dans une entité `Astronaut` :
+
+```java title="Astronaut.java"
+@Entity
+@NamedQuery(name = "Astronaut.findAstronautsByShipName",
+            query = """
+                    SELECT a FROM Astronaut a
+                    JOIN FETCH a.ship s
+                    LEFT JOIN FETCH a.alien
+                    WHERE s.name = :name
+                    """)
+public class Astronaut {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "ship_id", nullable = false)
+    private Ship ship;
+
+    @OneToOne(fetch = FetchType.LAZY, mappedBy = "host")
+    private Alien alien;
+
+    // Getters et setters
+}
+```
+
+Celle-ci définit une named query appelée `Astronaut.findAstronautsByShipName` qui sélectionne les astronautes en fonction du nom de leur vaisseau et qu'ils soient liés à un alien ou non. Le nom de la requête est spécifié par l'attribut `name`, et la requête JPQL elle-même est définie dans l'attribut `query`.
+
+<Aside type="note">
+    Par convention, le nom d'une **named query** est souvent préfixé par le nom de l'**entité** suivi d'un point et d'une description de la requête. Cela permet d'éviter les conflits de noms et de rendre les requêtes plus faciles à identifier.
+</Aside>
+
+<Aside type="tip">
+    Afin de faciliter la maintenabilité, écrivez les noms des **named queries** dans une constante, soit directement dans l'entité, soit dans une interface dédiée. Cela permet d'éviter les erreurs de frappe lors de l'utilisation des requêtes. Voici un exemple de définition d'une constante pour le nom de la **named query** dans l'entité `Astronaut` :
+
+```java title="Astronaut.java"
+@Entity
+@NamedQuery(name = Astronaut.FIND_ASTRONAUTS_BY_SHIP_NAME,
+            query = "SELECT a FROM Astronaut")
+public class Astronaut {
+
+    public static final String FIND_ASTRONAUTS_BY_SHIP_NAME =
+        "Astronaut.findAstronautsByShipName";
+
+    // Reste de l'entité
+
+}
+```
+</Aside>
+
+<HR />
+
+## Utiliser une named query
+
+Pour utiliser une **named query** dans **Panache ORM**, vous pouvez utiliser la méthode `find` de la classe **PanacheRepository** ou **PanacheEntity**, en passant le nom de la requête et les paramètres nécessaires.
+
+### Principe
+
+Voici basiquement comment utiliser la **named query** définie précédemment pour récupérer les astronautes par le nom de leur vaisseau :
+
+```java title="AstronautRepository.java"
+@ApplicationScoped
+public class AstronautRepository implements PanacheRepository<Astronaut> {
+
+    public List<Astronaut> findAstronautsByShipName(String shipName) {
+        return find("#Astronaut.findAstronautsByShipName",
+                    Parameters.with("name", shipName))
+               .list();
+    }
+
+}
+```
+
+Ici, nous utilisons la méthode `find` avec le nom de la **named query** précédé d'un `#` pour indiquer qu'il s'agit d'une **named query**. Nous passons également les paramètres nécessaires à la requête en utilisant la classe `Parameters` comme dans les **requêtes JPQL** standard.
+
+<Aside type="note">
+    Vous pouvez également utiliser les **paramètres positionnels** dans les **named queries** en utilisant des points d'interrogation (`?1`, `?2`, etc.) dans la définition de la requête, et en passant les paramètres dans l'ordre lors de l'appel de la méthode `find`. Cependant, l'utilisation de paramètres nommés est généralement préférée pour une meilleure lisibilité et maintenabilité du code sachant que l'ordre des paramètres peut être d'autant plus source d'erreurs dans le cadre des **named queries**.
+</Aside>
+
+<Aside type="caution" title="Limite">
+    Dans l'exemple donné, la référence à la **named query** utilise une chaîne de caractères littérale. Pour éviter les erreurs de frappe, il est recommandé d'utiliser une **constante** pour le nom de la **named query**, comme montré précédemment. Cela améliore la maintenabilité du code et réduit les risques d'erreurs. Pour autant, écrire ceci n'est pas optimal, car redondant et épuisant à maintenir :
+
+    ```java title="AstronautRepository.java"
+    public List<Astronaut> findAstronautsByShipName(String shipName) {
+        return find("#" + Astronaut.FIND_ASTRONAUTS_BY_SHIP_NAME,
+                    Parameters.with("name", shipName))
+                .list();
+    }
+    ```
+</Aside>
+
+<HR />
+
+### Solution pratique
+
+Pour profiter pleinement des **named queries** tout en évitant la redondance du `#` imposé par **Panache** et les erreurs de frappe, vous pouvez créer un **BaseRepository** générique et personnalisé qui encapsule cette logique. Voici comment vous pouvez le faire :
+
+```java title="BaseRepository.java"
+public abstract class BaseRepository<T> implements PanacheRepository<T> {
+
+    public PanacheQuery<T> findByNamedQuery(String namedQuery, Parameters params) {
+        return find("#" + namedQuery, params);
+    }
+
+}
+```
+
+Ensuite, vos repositories spécifiques peuvent étendre cette classe abstraite et utiliser la méthode `findByNamedQuery` pour exécuter les **named queries** sans avoir à répéter le `#` à chaque fois :
+
+```java title="AstronautRepository.java"
+@ApplicationScoped
+public class AstronautRepository extends BaseRepository<Astronaut> {
+
+    public List<Astronaut> findAstronautsByShipName(String shipName) {
+        return findByNamedQuery(Astronaut.FIND_ASTRONAUTS_BY_SHIP_NAME,
+                    Parameters.with("name", shipName))
+               .list();
+    }
+
+}
+```
+
+La méthode `findByNamedQuery` dans le **BaseRepository** est volontairement simple et directe, ce qui laisse la possibilité de choisir sur la méthode de récupération des résultats (comme `list()`, `firstResult()`, etc.) selon les besoins spécifiques de chaque repository. Cette approche améliore la lisibilité et la maintenabilité du code tout en tirant parti des avantages des **named queries** dans **Panache ORM**.

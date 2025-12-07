@@ -1,0 +1,493 @@
+---
+title: Tri et pagination
+description: Gérer le tri et la pagination des résultats avec Panache ORM dans Quarkus.
+sidebar:
+    order: 9
+---
+
+import {Aside, Tabs, TabItem, Steps} from '@astrojs/starlight/components';
+import {Underline, HR, Highlight} from '@components/index';
+
+La gestion du tri et de la pagination des résultats est une fonctionnalité essentielle dans de nombreuses applications. Avec **Panache ORM** dans **Quarkus**, vous pouvez facilement implémenter ces fonctionnalités pour améliorer l'expérience utilisateur et optimiser les performances de votre application.
+
+## Tri des résultats
+
+Le tri des résultats permet d'afficher les données dans un ordre spécifique, que ce soit par ordre croissant ou décroissant, en fonction d'un ou plusieurs champs. Avec **Panache**, vous pouvez facilement ajouter des options de tri à vos requêtes.
+
+### L'objet Sort
+
+Avec **Panache**, vous pouvez écrire la partie de la requête restante avec la clause `order by` pour spécifier les champs par lesquels vous souhaitez trier les résultats comme dans cet exemple :
+
+```java title="AstronautRepository.java"
+
+@ApplicationScoped
+public class AstronautRepository implements PanacheRepository<Astronaut> {
+
+    public List<Astronaut> findAllSorted() {
+        return find("order by ship.name, nickname").list();
+    }
+
+}
+```
+
+
+Cependant, pour une approche plus fluide et orientée objet, **Panache** fournit un objet `Sort` qui facilite la définition des critères de tri. Vous pouvez créer un objet `Sort` en utilisant la méthode statique `by`, puis enchaîner des appels à `and` pour ajouter plusieurs critères de tri.
+
+Voici des exemples de création d'un objet `Sort` avec différentes options :
+
+- `Sort.by` :
+
+```java
+Sort sort = Sort.by("nickname");
+```
+<hr />
+
+- `Sort.by` avec plusieurs critères :
+
+```java
+Sort sort = Sort.by("ship.name").and("nickname");
+```
+<hr />
+
+- `Sort.by` en récupérant les valeurs nulls en premier avec l'option `Sort.NullPrecedence` :
+
+```java
+Sort sort = Sort.by("ship.name", Sort.NullPrecedence.NULLS_FIRST);
+```
+<hr />
+
+- `Sort.by` en récupérant les valeurs nulls en dernier avec l'option `Sort.NullPrecedence` :
+
+```java
+Sort sort = Sort.by("ship.name", Sort.NullPrecedence.NULLS_LAST);
+```
+<hr />
+
+- `Sort.descending` pour un tri décroissant :
+
+```java
+Sort sort = Sort.descending("nickname");
+```
+<hr />
+
+- `Sort.ascending` pour un tri croissant (déjà par défaut) :
+
+```java
+Sort sort = Sort.ascending("nickname");
+```
+<hr />
+
+- Combinaison de tri croissant et décroissant avec l'option `Sort.Direction` :
+
+```java
+Sort sort = Sort.by("ship.name").and("nickname", Sort.Direction.DESCENDING);
+```
+<hr />
+
+- Tri avec récupération des valeurs nulls en premier et dernier combiné, ordre croissant et décroissant :
+
+```java
+Sort sort = Sort.by("ship.name", Sort.NullPrecedence.NULLS_FIRST)
+                .and("nickname", Sort.Direction.DESCENDING, Sort.NullPrecedence.NULLS_LAST);
+```
+
+
+### Tri simple
+
+Voici un exemple de méthode dans un **repository** qui permet de trier les résultats par nom de vaisseau et surnom d'astronaute avec l'objet `Sort` pour définir les critères de tri dans un `listAll` :
+
+```java title="AstronautRepository.java"
+
+@ApplicationScoped
+public class AstronautRepository implements PanacheRepository<Astronaut> {
+
+    public List<Astronaut> findAllSorted() {
+        return listAll(Sort.by("ship.name").and("nickname"));
+    }
+
+}
+```
+
+
+### Tri avec filtres
+
+Pour les cas de requête avec filtre, vous pouvez passer les critères de tri en paramètres en respectant cet ordre :
+
+```java title="AstronautRepository.java"
+
+@ApplicationScoped
+public class AstronautRepository implements PanacheRepository<Astronaut> {
+
+    public List<Astronaut> findAllByShipNameSorted(String shipName) {
+        return find("ship.name", Sort.by("birthdate").and("nickname"), shipName)
+                .list();
+    }
+
+}
+```
+
+### Tri avec named query
+
+Pas de chance ! Vous ne pouvez pas utiliser l'objet `Sort` avec une **named query**. Vous devez impérativement écrire la clause `order by` dans la définition de la **named query** elle-même. Allez hop, retournez à la section sur les [named queries](../les-named-queries) pour un rappel. Et interdiction de ronchonner là, je vous entends !
+
+### Tri avec projection
+
+Vous pouvez également utiliser une **projection** pour ne récupérer que certains champs tout en appliquant le tri. Pour ce faire, vous devez passer par un `findAll` avec l'objet `Sort` :
+
+```java title="AstronautRepository.java"
+
+@ApplicationScoped
+public class AstronautRepository implements PanacheRepository<Astronaut> {
+
+    public List<AstronautInfo> findAllByShipNameSorted(String shipName) {
+        return findAll("ship.name", Sort.by("birthdate").and("nickname"), shipName)
+                .project(AstronautInfo.class)
+                .list();
+    }
+
+}
+```
+
+
+<HR />
+
+## Pagination des résultats
+
+La pagination est une technique utilisée pour diviser les résultats d'une requête en pages plus petites, ce qui est particulièrement utile lorsque vous travaillez avec de grandes quantités de données. Avec **Panache ORM**, la pagination est simple à mettre en œuvre grâce à la méthode `page` à laquelle vous pouvez passer le numéro de page et la taille de la page.
+
+Pour rendre possible la personnalisation de ces paramètres de pagination, vous pouvez très facilement les exposer via des paramètres dans vos endpoints REST.
+
+```java title="AstronautResource.java"
+@GET
+public List<Astronaut> getAstronauts(
+        @QueryParam("page") @DefaultValue("0") int page,
+        @QueryParam("size") @DefaultValue("10") int size) {
+    return astronautService.findAll(page, size);
+}
+```
+
+
+### Pagination simple
+
+Voici un exemple de méthode dans un **repository** qui permet de paginer les résultats avec une taille de page spécifique et un numéro de page donné :
+
+```java title="AstronautRepository.java"
+@ApplicationScoped
+public class AstronautRepository implements PanacheRepository<Astronaut> {
+
+    public List<Astronaut> findAllPaginated(int pageNumber, int pageSize) {
+        return findAll()
+                .page(pageNumber, pageSize)
+                .list();
+    }
+
+}
+```
+
+
+### Pagination avec tri
+
+Vous pouvez également combiner la pagination avec le tri des résultats en utilisant l'objet `Sort`.
+
+```java title="AstronautRepository.java"
+@ApplicationScoped
+public class AstronautRepository implements PanacheRepository<Astronaut> {
+
+    public List<Astronaut> findAllPaginatedAndSorted(int pageNumber, int pageSize) {
+        return findAll(Sort.by("nickname"))
+                .page(pageNumber, pageSize)
+                .list();
+    }
+
+}
+```
+
+### Pagination avec filtres
+
+La pagination peut également être appliquée aux requêtes avec des filtres.
+
+```java title="AstronautRepository.java"
+@ApplicationScoped
+public class AstronautRepository implements PanacheRepository<Astronaut> {
+
+    public List<Astronaut> findAllByShipNamePaginated(String shipName, int pageNumber, int pageSize) {
+        return find("ship.name", shipName)
+                .page(pageNumber, pageSize)
+                .list();
+    }
+
+}
+```
+
+### Pagination avec named query
+
+Contrairement au tri, vous pouvez utiliser la pagination **Panache** avec une **named query**.
+
+```java title="AstronautRepository.java"
+@ApplicationScoped
+public class AstronautRepository extends BaseRepository<Astronaut> {
+
+    public List<Astronaut> findAstronautsByShipNamePaginated(String shipName, int pageNumber, int pageSize) {
+        return findByNamedQuery("Astronaut.FIND_ASTRONAUTS_BY_SHIP_NAME",
+                    Parameters.with("name", shipName))
+               .page(pageNumber, pageSize)
+               .list();
+    }
+
+}
+```
+
+### Pagination avec projection
+
+Vous pouvez également utiliser une **projection** tout en appliquant la pagination.
+
+```java title="AstronautRepository.java"
+@ApplicationScoped
+public class AstronautRepository implements PanacheRepository<Astronaut> {
+
+    public List<AstronautInfo> findAllByShipNamePaginated(String shipName, int pageNumber, int pageSize) {
+        return find("ship.name", shipName)
+                .project(AstronautInfo.class)
+                .page(pageNumber, pageSize)
+                .list();
+    }
+
+}
+```
+
+<Aside type="caution">
+    <Underline>Ce modèle ne fonctionne qu'avec des **projections** sans collections, donc non flat</Underline>. Dans le cadre de **projections** avec des collections (*one-to-many*, *many-to-many*), la **pagination** telle que présentée ci-dessus peut entraîner des résultats inattendus, <Underline>car elle est appliquée directement au résultat de la requête</Underline>. Cela veut dire que pour une entité avec une relation one-to-many, la pagination pourrait tronquer les collections associées, menant à des résultats incomplets ou incorrects.
+</Aside>
+
+<HR />
+
+
+Pour les **projections flat** avec collections, une approche alternative consiste à d'abord récupérer les identifiants des entités paginées, puis à effectuer une seconde requête pour charger les entités complètes avec leurs collections associées. Cette méthode garantit que la **pagination** est correctement appliquée au niveau des entités principales, tout en permettant de charger les collections associées de manière appropriée.
+
+Pour ce faire :
+
+<Steps>
+
+1. <Highlight>Créez un record de projection pour l'identifiant :</Highlight>
+
+    ```java title="DatabaseIdentifierProjection.java"
+    @RegisterForReflection
+    public record DatabaseIdentifier(
+        Long id
+    ) {}
+    ```
+
+    <hr />
+
+2. <Highlight>Utilisez cette projection pour récupérer les identifiants paginés :</Highlight>
+
+    ```java title="AstronautRepository.java"
+    @ApplicationScoped
+    public class AstronautRepository implements PanacheRepository<Astronaut> {
+
+        public List<Long> findPaginatedIds(int pageNumber, int pageSize) {
+            return findAll()
+                    .page(pageNumber, pageSize)
+                    .project(DatabaseIdentifier.class)
+                    .list()
+                    .stream().map(DatabaseIdentifier::id)
+                    .toList();
+        }
+
+    }
+    ```
+
+    <Aside type="tip">
+        Cette méthode pourrait être définie dans un **BaseRepository** générique pour être réutilisée avec différentes entités.
+    </Aside>
+
+    <hr />
+
+3. <Highlight>Définir une named query pour sélectionner les entités à partir de leurs identifiants :</Highlight>
+
+    ```java title="Astronaut.java"
+    @Entity
+    @Table(name = "astronauts")
+    @NamedQuery(
+        name = Astronaut.FIND_ALL_BY_IDS,
+        query = """
+                    SELECT a.nickname, a.uuid, s.name, s.id
+                    FROM Astronaut a
+                    LEFT JOIN a.skills s
+                    WHERE a.id IN :ids
+                """
+    )
+    public class Astronaut {
+
+        public static final String FIND_ALL_BY_IDS = "Astronaut.findAllByIds";
+
+        // Champs et méthodes de l'entité
+    }
+    ```
+
+    <hr />
+
+4. <Highlight>Créez un record de projection pour les résultats de la named query :</Highlight>
+
+    ```java title="AstronautProjection.java"
+    @RegisterForReflection
+    public record AstronautProjection(
+        String nickname,
+        UUID uuid,
+        String skillName,
+        Long skillId
+    ) { }
+    ```
+
+    <hr />
+
+5. <Highlight>Créez un record DTO pour représenter l'entité avec ses collections :</Highlight>
+
+    ```java title="AstronautInfo.java"
+
+    public record AstronautInfo(
+        String nickname,
+        UUID uuid,
+        List<SkillInfo> skills
+    ) {
+
+        public record SkillInfo(
+            Long id,
+            String name
+        ) {}
+    }
+    ```
+
+    <hr />
+
+6. <Highlight>Chargez les entités complètes avec leurs collections associées en utilisant les identifiants récupérés :</Highlight>
+
+    ```java title="AstronautRepository.java"
+    @ApplicationScoped
+    public class AstronautRepository extends BaseRepository<Astronaut> {
+
+        public List<AstronautInfo> findAllByIds(List<Long> ids) {
+
+            List<AstronautProjection> rows = findByNamedQuery(Astronaut.FIND_ALL_BY_IDS,
+                    Parameters.with("ids", ids))
+                .project(AstronautProjection.class)
+                .list();
+
+            return rows.stream()
+                .collect(Collectors.groupingBy(AstronautProjection::uuid))
+                .values().stream()
+                .map(astro -> {
+
+                    AstronautProjection astroInfo = astro.getFirst();
+                    List<AstronautInfo.SkillInfo> skills = projectionMapper.toDTOList(astro);
+                    return projectionMapper.toDTO(astroInfo, skills);
+
+                })
+                .toList();
+        }
+
+    }
+    ```
+</Steps>
+
+
+Avec cette approche, vous pouvez gérer efficacement la pagination des résultats tout en assurant que les collections associées sont correctement chargées et représentées dans vos **projections**.
+
+<HR />
+
+### Méthodes utilitaires de pagination
+
+**Panache** fournit également des méthodes utilitaires pour faciliter la gestion de la pagination et sa navigation, notamment pour obtenir le nombre total de pages et le nombre total d'éléments. Pour en bénéficier, vous devez utiliser un objet `PanacheQuery`, ce qui suppose de récupérer les résultats dans une autre variable.
+
+
+Voici un exemple :
+
+```java
+PanacheQuery<Astronaut> query = findAll()
+        .page(pageIndex, pageSize);
+
+List<Astronaut> astronauts = query.list();
+
+long totalCount = query.count();
+int totalPages = query.pageCount();
+```
+
+
+#### Méthodes
+
+Voici les principales méthodes utilitaires disponibles sur l'objet `PanacheQuery` pour la gestion de la **pagination** :
+
+- `page().index()` : Retourne le numéro de la page actuelle (indexée à partir de 0).
+- `page().size()` : Retourne la taille de la page définie pour la pagination.
+- `count()` : Retourne le nombre total d'éléments correspondant à la requête, indépendamment de la pagination.
+- `pageCount()` : Retourne le nombre total de pages disponibles en fonction de la taille de la page définie.
+- `hasNextPage()` : Indique s'il existe une page suivante par rapport à la page actuelle.
+- `hasPreviousPage()` : Indique s'il existe une page précédente par rapport à la page actuelle.
+- `nextPage()` : Avance la pagination à la page suivante.
+- `previousPage()` : Recule la pagination à la page précédente.
+
+
+
+#### Solution complète
+
+Voici un exemple concret d'utilisation de ces méthodes utilitaires pour retourner un objet de résultat paginé personnalisé :
+
+
+<Steps>
+
+1. <Highlight>Créez un record pour encapsuler les résultats paginés :</Highlight>
+
+    ```java title="PaginatedResult.java"
+    public record PaginatedResult<T>(
+        List<T> items,
+        int pageIndex,
+        int pageSize,
+        long totalPages,
+        boolean hasPrevious,
+        boolean hasNext,
+        long totalElements
+    ) {
+        public static <T> PaginatedResult<T> empty() {
+            return new PaginatedResult<>(List.of(), 0, 0, 0, false, false, 0);
+        }
+    }
+    ```
+
+    <Aside type="tip">
+        On rend cet objet générique avec `<T>` pour pouvoir l'utiliser avec différentes entités sachant que la pagination est un concept transversal et couramment réutilisé dans les applications.
+
+        Définir une méthode `empty()` statique permet de retourner un objet paginé vide lorsque la requête ne renvoie aucun résultat, ce qui simplifie la gestion des cas où il n'y a pas de données à afficher.
+    </Aside>
+
+    <hr />
+
+2. <Highlight>Utilisez cet objet dans votre méthode de repository pour retourner les résultats paginés avec les informations supplémentaires :</Highlight>
+
+    ```java title="AstronautRepository.java"
+    @ApplicationScoped
+    public class AstronautRepository implements PanacheRepository<Astronaut> {
+
+        public PaginatedResult<Astronaut> findAllPaginated(int pageNumber, int pageSize) {
+
+            PanacheQuery<Astronaut> query = findAll()
+                        .page(pageNumber, pageSize);
+
+            List<Astronaut> astronauts = query.list();
+
+            if (astronauts.isEmpty()) return PaginatedResult.empty();
+
+            return new PaginatedResult<>(
+                astronauts,
+                query.page().index,
+                query.page().size,
+                query.pageCount(),
+                query.hasPreviousPage(),
+                query.hasNextPage(),
+                query.count()
+            );
+        }
+
+    }
+    ```
+
+</Steps>

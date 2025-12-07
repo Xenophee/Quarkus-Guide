@@ -2,3 +2,11 @@
 .tablist-wrapper {
     @apply my-10;
 }
+
+.sl-link-card {
+    @apply bg-transparent hover:border-rose-400 hover:shadow-lg transition duration-300;
+
+    & .icon {
+        @apply text-rose-500;
+    }
+}

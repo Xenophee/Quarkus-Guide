@@ -21,7 +21,7 @@ Dans cet article, nous allons explorer des fonctionnalités avancées de **Panac
 
 Pour commencer, nous devons définir une entité qui représentera une table dans notre base de données. Voici un exemple d’entité `Alien` pour illustrer les opérations.
 
-```java
+```java title="Alien.java"
 @Entity
 @Table(name = "aliens")
 public class Alien {
@@ -45,7 +45,7 @@ public class Alien {
 
 Puis la classe **repository** associée :
 
-```java
+```java title="AlienRepository.java"
 @ApplicationScoped
 public class AlienRepository implements PanacheRepository<Alien> {
     // Méthodes CRUD personnalisées sont ajoutées ici

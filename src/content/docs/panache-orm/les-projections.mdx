@@ -1,0 +1,681 @@
+---
+title: Les projections
+description: Utiliser les projections avec Panache ORM dans Quarkus.
+sidebar:
+    order: 8
+---
+
+import {Aside, Tabs, TabItem, LinkCard, Steps} from '@astrojs/starlight/components';
+import {Underline, HR, Highlight} from '@components/index';
+
+Les **projections** permettent de sélectionner uniquement certaines colonnes d'une entité au lieu de récupérer l'entité complète. <Underline>Cela peut être utile pour optimiser les performances lorsque vous n'avez besoin que de quelques attributs d'une **entité**</Underline>. Par exemple, si vous avez une **entité** `Astronaut` avec de nombreux attributs, mais que vous ne souhaitez récupérer que le *nom* et l'*ID*, vous pouvez utiliser une projection pour ne sélectionner que ces colonnes et économiser ainsi de la mémoire et du temps de traitement.
+
+
+
+
+Pour utiliser les **projections** avec **Panache ORM**, vous pouvez définir une classe ou record **DTO** (*Data Transfer Object*) qui contient uniquement les attributs que vous souhaitez récupérer.
+
+<Aside type="tip">
+    Si vous êtes en **Java 16** ou une version ultérieure, il est recommandé d'utiliser des **records** pour définir vos **projections**. Les **records** offrent une syntaxe plus concise et <Underline>sont immuables par défaut</Underline>, ce qui les rend idéaux pour les **DTOs**.
+
+    Si vous optez pour les **classes** classiques, assurez-vous d'inclure des **constructeurs** appropriés et des méthodes `getter` pour chaque attribut projeté afin que **Quarkus** puisse instancier correctement les objets lors de l'exécution.
+</Aside>
+
+<HR />
+
+## Projection simple
+
+
+<Steps>
+
+1. <Highlight>Définir la projection</Highlight>
+
+    Pour une entité `Astronaut` dont l'on souhaite récupérer uniquement l'`id` et le `nickname`, vous pouvez définir une **projection** comme suit :
+
+
+    <Tabs>
+        <TabItem label="Record" icon="right-caret">
+
+            ```java title="AstronautProjection.java"
+            @RegisterForReflection
+            public record AstronautProjection(
+                Long id,
+                String nickname
+            ) {}
+            ```
+
+        </TabItem>
+
+        <TabItem label="Classe" icon="right-caret">
+
+            ```java title="AstronautProjection.java"
+            @RegisterForReflection
+            public class AstronautProjection {
+
+                private Long id;
+                private String nickname;
+
+                public AstronautProjection(Long id, String nickname) {
+                    this.id = id;
+                    this.nickname = nickname;
+                }
+
+                // Getters et setters
+            }
+            ```
+
+        </TabItem>
+    </Tabs>
+
+    L'annotation `@RegisterForReflection` est utilisée pour s'assurer que **Quarkus** peut accéder à cette classe lors de l'exécution, notamment dans les environnements natifs. Cela est important pour les **projections**, car elles sont souvent utilisées dans des contextes où la réflexion est nécessaire pour instancier les objets.
+
+    <hr />
+
+2. <Highlight>Utiliser la projection dans une requête Panache</Highlight>
+
+    Ensuite, vous pouvez utiliser ces classes ou records dans vos requêtes **Panache**.
+
+    ```java title="AstronautRepository.java"
+
+    @ApplicationScoped
+    public class AstronautRepository implements PanacheRepository<Astronaut> {
+
+        public List<AstronautProjection> findAllAstronauts() {
+            return findAll()
+                    .project(AstronautProjection.class)
+                    .list();
+        }
+
+    }
+    ```
+
+    Ici, nous utilisons la méthode `project` pour spécifier que nous souhaitons projeter les résultats dans la classe `AstronautProjection`. La méthode `list` renvoie une liste d'objets de type `AstronautProjection` contenant uniquement les attributs définis dans la projection. L'utilisation de `findAll()` est utile lorsque vous souhaitez récupérer tous les enregistrements de l'entité et que vous souhaitez appliquer une projection à ces résultats sans filtrage préalable.
+
+</Steps>
+
+<Aside type="caution">
+    Pour récupérer les ids des entités par exemple, vous pouvez utiliser une projection simple qui ne sélectionne que l'identifiant de l'entité, mais vous ne pouvez pas faire ceci :
+
+    ```java
+    List<Long> ids = findAll()
+        .project(Long.class)
+        .list();
+    ```
+
+    **Panache** ne supporte pas les projections directes sur des types simples comme `Long`, `String`, etc. puisqu'ils ne disposent pas de l'annotation `@RegisterForReflection`. À la place, vous devez créer une projection personnalisée qui encapsule l'identifiant.
+</Aside>
+
+<HR />
+
+## Projection imbriquée
+
+<Steps>
+
+1. <Highlight>Définir la projection</Highlight>
+
+    Pour une projection plus complexe, vous pouvez également définir des projections imbriquées. Par exemple, si vous souhaitez récupérer les informations d'un astronaute ainsi que les détails de son vaisseau spatial, vous pouvez définir deux projections comme suit :
+
+    <Tabs>
+        <TabItem label="Record" icon="right-caret">
+
+            ```java title="AstronautProjection.java"
+            @RegisterForReflection
+            public record AstronautProjection(
+
+                UUID uuid,
+                String nickname,
+                Ship ship
+
+            ) {
+
+                @NestedProjectedClass
+                public record Ship(String name) {}
+
+            }
+            ```
+
+        </TabItem>
+
+        <TabItem label="Classe" icon="right-caret">
+
+            ```java title="AstronautProjection.java"
+            @RegisterForReflection
+            public class AstronautProjection {
+
+                private UUID uuid;
+                private String nickname;
+                private Ship ship;
+
+                public AstronautProjection(UUID uuid, String nickname, Ship ship) {
+                    this.uuid = uuid;
+                    this.nickname = nickname;
+                    this.ship = ship;
+                }
+
+                // Getters et setters
+
+                @NestedProjectedClass
+                public static class Ship {
+
+                    private String name;
+
+                    public Ship(String name) {
+                        this.name = name;
+                    }
+
+                    // Getters et setters
+                }
+            }
+            ```
+
+        </TabItem>
+    </Tabs>
+
+    Notez l'utilisation de l'annotation `@NestedProjectedClass` pour indiquer que la classe `Ship` est une projection imbriquée. Cela permet à Quarkus de gérer correctement la projection des objets imbriqués lors de l'exécution.
+
+    <Aside type="note">
+        <Underline>Les **projections** ne prennent en charge que les classes ou records avec des constructeurs correspondant aux attributs projetés</Underline>. Assurez-vous que les noms et types des attributs dans la **projection** correspondent exactement à ceux de l'entité source. Sinon, vous pourriez rencontrer des erreurs lors de l'exécution.
+    </Aside>
+
+    Avec ce type de **projection**, lorsque vous récupérez un astronaute, vous obtiendrez également les informations de son vaisseau spatial dans un objet imbriqué, comme ceci :
+
+    ```json
+    {
+        "uuid": "123e4567-e89b-12d3-a456-426614174000",
+        "nickname": "Ash",
+        "ship": {
+            "name": "Nostromo"
+        }
+    }
+    ```
+
+    Si vous souhaitez un résultat à plat, vous pouvez opter pour les `@ProjectedFieldName`, ce qui donnerait :
+
+    <Tabs>
+        <TabItem label="Record" icon="right-caret">
+
+            ```java title="AstronautProjection.java"
+            @RegisterForReflection
+            public record AstronautProjection(
+
+                UUID uuid,
+                String nickname,
+                @ProjectedFieldName("ship.name")
+                String shipName
+
+            ) { }
+            ```
+
+        </TabItem>
+
+        <TabItem label="Classe" icon="right-caret">
+
+            ```java title="AstronautProjection.java"
+            @RegisterForReflection
+            public class AstronautProjection {
+
+                private UUID uuid;
+                private String nickname;
+                private String shipName;
+
+                public AstronautProjection(UUID uuid, String nickname, @ProjectedFieldName("ship.name") String shipName) {
+                    this.uuid = uuid;
+                    this.nickname = nickname;
+                    this.shipName = shipName;
+                }
+
+                // Getters et setters
+            }
+            ```
+
+        </TabItem>
+    </Tabs>
+
+    Cela produirait un résultat JSON comme ceci :
+
+    ```json
+    {
+        "uuid": "123e4567-e89b-12d3-a456-426614174000",
+        "nickname": "Ash",
+        "shipName": "Nostromo"
+    }
+    ```
+
+    <Aside type="caution">
+        Les **projections Panache ORM** ne prennent pas en charge les relations `@OneToMany` ou `@ManyToMany`. Si vous avez besoin de projeter des **collections**, vous devrez gérer cela manuellement dans votre code.
+    </Aside>
+
+    <hr />
+
+2. <Highlight>Utiliser la projection dans une requête Panache</Highlight>
+
+    Les **projections imbriquées** sont utilisées de la même manière. Voici un exemple de méthode dans le **repository** qui utilise la projection imbriquée définie précédemment :
+
+    ```java title="AstronautRepository.java"
+    @ApplicationScoped
+    public class AstronautRepository implements PanacheRepository<Astronaut> {
+
+        public Optional<AstronautProjection> findAstronautsWithShip(Long id) {
+            return find("id", id)
+                    .project(AstronautProjection.class)
+                    .firstResultOptional();
+        }
+
+    }
+    ```
+
+    Ici, nous utilisons la méthode `project` pour spécifier que nous souhaitons projeter les résultats dans la classe `AstronautProjection`, qui inclut une projection imbriquée pour le vaisseau spatial. La méthode `firstResultOptional` renvoie un `Optional` contenant l'objet projeté si un résultat est trouvé, ou vide sinon.
+
+    <Aside type="note">
+        Dans le cadre des **projections**, les méthodes de type `findBy...` ne sont pas utilisées, car elles sont conçues pour retourner des **entités** complètes. Au lieu de cela, nous utilisons la méthode `find` avec une condition spécifique (par exemple, `id`) pour filtrer les résultats avant d'appliquer la **projection**.
+    </Aside>
+
+</Steps>
+
+<HR />
+
+
+## Projection flat
+
+Pour gérer la problématique des **collections** dans les **projections**, vous pouvez utiliser une approche "flat" (à plat) en définissant une **projection** qui inclut les attributs nécessaires sans utiliser de **collections**.
+
+
+### Récupérer un élément avec une collection
+
+<Steps>
+
+1. <Highlight>Définir le DTO</Highlight>
+
+    Avant toute chose, vous devez définir le **DTO** (*Data Transfert Object*) qui représentera les données que vous souhaitez récupérer selon le format attendu par le client. Par exemple, pour un astronaute et son vaisseau avec une liste de compétences, vous pouvez définir un **DTO** comme suit :
+
+    ```java title="AstronautInfo.java"
+    public record AstronautInfo(
+
+        String nickname,
+        ShipInfo ship,
+        List<SkillsInfo> skills
+
+    ) {
+
+        public record ShipInfo(
+            String name
+        ) {}
+
+        public record SkillsInfo(
+            Long id,
+            String name
+        ) {}
+    }
+    ```
+
+    Le **DTO** `AstronautInfo` contient lui même des **DTOs** imbriqués pour le vaisseau (`ShipInfo`) et les compétences (`SkillsInfo`) afin de structurer les données de manière claire.
+
+    <hr />
+
+2. <Highlight>Définir la projection</Highlight>
+
+    Par exemple, si vous souhaitez récupérer les noms des astronautes, le nom de leur vaisseau et la liste de leurs compétences, vous pouvez définir une **projection** comme suit :
+
+    <Tabs>
+        <TabItem label="Record" icon="right-caret">
+
+            ```java title="AstronautFlatProjection.java"
+            @RegisterForReflection
+            public record AstronautFlatProjection(
+
+                String nickname,
+                String shipName,
+                String skillName,
+                Long skillId
+
+            ) {}
+            ```
+
+        </TabItem>
+
+        <TabItem label="Classe" icon="right-caret">
+
+            ```java title="AstronautFlatProjection.java"
+            @RegisterForReflection
+            public class AstronautFlatProjection {
+
+                private String nickname;
+                private String shipName;
+                private String skillName;
+                private Long skillId;
+
+                public AstronautFlatProjection(String nickname, String shipName, String skillName, Long skillId) {
+                    this.nickname = nickname;
+                    this.shipName = shipName;
+                    this.skillName = skillName;
+                    this.skillId = skillId;
+                }
+
+                // Getters et setters
+        }
+            ```
+
+        </TabItem>
+    </Tabs>
+
+    Dans ce cas, chaque enregistrement de la **projection** contiendra le nom de l'astronaute, de son vaisseau et le nom d'une compétence associée. Si un astronaute a plusieurs compétences, il y aura plusieurs enregistrements dans le résultat, un pour chaque compétence et il faudra ensuite gérer la transformation de ces résultats "plats" en une structure plus riche dans votre code métier.
+
+    <Aside type="note">
+        Étant donné la structure de la projection, **Panache** ne saura pas mapper automatiquement les champs. <Underline>Vous devrez donc écrire une **requête JPQL** personnalisée pour sélectionner les champs appropriés</Underline>. C'est là que l'usage des **named queries** est pertinent.
+
+        <LinkCard
+            title="Besoin d'un rappel sur les named queries ?"
+            href="/panache-orm/les-named-queries"
+        />
+    </Aside>
+
+    <Aside type="caution">
+        Vous ne pouvez pas mélanger projections "plates" et imbriquées dans une même projection. Les projections "plates" sont conçues pour des structures simples sans relations complexes, tandis que les projections imbriquées permettent de représenter des relations hiérarchiques entre entités. Choisissez l'approche qui convient le mieux à vos besoins en fonction de la complexité des données que vous souhaitez récupérer.
+
+        Dans le scénario présenté dans la partie des projections imbriqué, le nom du vaisseau était récupérable via une projection imbriquée. Ici, dans le contexte des projections "plates", le nom du vaisseau est récupéré directement comme un champ simple (`shipName`) dans la projection "plate".
+    </Aside>
+
+    <hr />
+
+3. <Highlight>Définir la méthode de mapping</Highlight>
+
+    Pour s'épargner la verbosité du mapping manuel, vous pouvez créer une classe de mapping pour transformer les résultats issu de la projection en objets correctement structurés. La librairie **MapStruct** peut être utilisée pour automatiser ce processus de mapping.
+
+    ```java title="ProjectionMapper.java"
+    @Mapper(componentModel = "cdi")
+    public interface ProjectionMapper {
+
+        @Mapping(source = "projection.shipName", target = "ship.name")
+        AstronautInfo toDTO(AstronautFlatProjection projection, List<AstronautInfo.SkillsInfo> skills);
+
+        @Mapping(source = "skillName", target = "name")
+        @Mapping(source = "skillId", target = "id")
+        AstronautInfo.SkillsInfo toDTO(AstronautFlatProjection projection);
+
+        List<AstronautInfo.SkillsInfo> toDTOList(List<AstronautFlatProjection> projections);
+    }
+    ```
+
+    <hr />
+
+4. <Highlight>Définir la named query</Highlight>
+
+    Vous pouvez définir une **named query** dans l'entité `Astronaut` pour récupérer les données nécessaires à la projection "flat" :
+
+    ```java title="Astronaut.java"
+    @Entity
+    @NamedQuery(
+        name = Astronaut.FIND_ASTRONAUT_BY_ID,
+        query = """
+                    SELECT a.nickname, a.ship.name, s.name, s.id
+                    FROM Astronaut a
+                    JOIN a.ship
+                    JOIN a.skills s
+                    WHERE a.id = :id
+                """
+    )
+    public class Astronaut {
+
+        public static final String FIND_ASTRONAUT_BY_ID = "Astronaut.findById";
+
+        // Reste de l'entité
+
+    }
+    ```
+
+    <Aside type="caution">
+        Les champs sélectionnés n'ont pas besoin de correspondre aux attributs de la projection ; les noms ne sont pas pris en compte, mais l'ordre et les types doivent correspondre pour que le mapping fonctionne correctement.
+    </Aside>
+
+    <hr />
+
+5. <Highlight>Utiliser la projection dans une requête Panache</Highlight>
+
+    Vous pouvez ensuite utiliser cette **named query** dans votre **repository** pour récupérer les données projetées :
+
+    ```java title="AstronautRepository.java"
+    @ApplicationScoped
+    public class AstronautRepository extends BaseRepository<Astronaut> {
+
+        public Optional<AstronautInfo> findAstronautById(Long id) {
+            List<AstronautFlatProjection> rows = findByNamedQuery(Astronaut.FIND_ASTRONAUT_BY_ID,
+                            Parameters.with("id", id))
+                        .project(AstronautFlatProjection.class)
+                        .list();
+
+            if (rows.isEmpty()) return Optional.empty();
+
+            AstronautFlatProjection astroInfo = rows.getFirst();
+            List<SkillsInfo> skills = projectionMapper.toDTOList(rows);
+
+            return Optional.of(
+                projectionMapper.toDTO(id, astroInfo, skills)
+            );
+        }
+
+    }
+    ```
+
+    Ici, nous utilisons la méthode `findByNamedQuery` que l'on a défini dans le `BaseRepository` (voir l'article sur les named queries) avec le nom de la **named query** pour exécuter la requête définie précédemment. La méthode `project` est utilisée pour spécifier que nous souhaitons projeter les résultats dans la classe `AstronautFlatProjection`. La méthode `list` renvoie une liste d'objets de type `AstronautFlatProjection` contenant le nom de l'astronautes et de ses compétences associées.
+
+    Basiquement, le résultat renvoyé par la requête sera une liste "plate" où chaque ligne correspond à un astronaute et une de ses compétences. Vous aurez donc des doublons de ses informations hors collection. Vous pouvez vous représenter cela ainsi :
+
+    | nickname | shipName | skillName                | skillId |
+    | ---------| ------ |-------------------------| --------|
+    | Ash       | Nostromo | Informatique             | 1 |
+    | Ash       | Nostromo | Pilotage                 | 2 |
+    | Ash       | Nostromo | Combat au corps à corps  | 3 |
+
+    Vous devrez ensuite transformer cette liste en une structure plus riche (le DTO que nous avons défini plus haut) dans votre code métier. Pour éviter tout traitement inutile, vous pouvez vérifier si la liste est vide avant de procéder au mapping.
+
+    Ensuite, vous pouvez extraire les informations de l'astronaute à partir de la première ligne (puisque toutes les lignes contiennent les mêmes informations d'astronaute) et mapper la liste complète des compétences en utilisant le `ProjectionMapper`.
+
+    Enfin, vous assemblez le tout dans un objet `AstronautInfo` que vous retournez encapsulé dans un `Optional`.
+
+</Steps>
+
+
+
+### Récupérer une liste d'éléments avec des collections
+
+<Steps>
+
+1. <Highlight>Définir le DTO</Highlight>
+
+    Avant toute chose, vous devez définir le **DTO** (*Data Transfert Object*) qui représentera les données que vous souhaitez récupérer selon le format attendu par le client. Par exemple, pour un astronaute et son vaisseau avec une liste de compétences, vous pouvez définir un **DTO** comme suit :
+
+    ```java title="AstronautInfo.java"
+    public record AstronautInfo(
+
+        Long id,
+        String nickname,
+        ShipInfo ship,
+        List<SkillsInfo> skills
+
+    ) {
+
+        public record ShipInfo(
+            String name
+        ) {}
+
+        public record SkillsInfo(
+            Long id,
+            String name
+        ) {}
+    }
+    ```
+
+    Le **DTO** `AstronautInfo` contient lui même des **DTOs** imbriqués pour le vaisseau (`ShipInfo`) et les compétences (`SkillsInfo`) afin de structurer les données de manière claire.
+
+    <hr />
+
+2. <Highlight>Définir la projection</Highlight>
+
+    Par exemple, si vous souhaitez récupérer les noms des astronautes, le nom de leur vaisseau et la liste de leurs compétences, vous pouvez définir une **projection** comme suit :
+
+    <Tabs>
+        <TabItem label="Record" icon="right-caret">
+
+            ```java title="AstronautFlatProjection.java"
+            @RegisterForReflection
+            public record AstronautFlatProjection(
+
+                String nickname,
+                String shipName,
+                String skillName,
+                Long skillId
+
+            ) {}
+            ```
+
+        </TabItem>
+
+        <TabItem label="Classe" icon="right-caret">
+
+            ```java title="AstronautFlatProjection.java"
+            @RegisterForReflection
+            public class AstronautFlatProjection {
+
+                private Long id;
+                private String nickname;
+                private String shipName;
+                private String skillName;
+                private Long skillId;
+
+                public AstronautFlatProjection(Long id, String nickname, String shipName, String skillName, Long skillId) {
+                    this.id = id;
+                    this.nickname = nickname;
+                    this.shipName = shipName;
+                    this.skillName = skillName;
+                    this.skillId = skillId;
+                }
+
+                // Getters et setters
+        }
+            ```
+
+        </TabItem>
+    </Tabs>
+
+    Dans ce cas, chaque enregistrement de la **projection** contiendra le nom de l'astronaute, de son vaisseau et le nom d'une compétence associée. Si un astronaute a plusieurs compétences, il y aura plusieurs enregistrements dans le résultat, un pour chaque compétence et il faudra ensuite gérer la transformation de ces résultats "plats" en une structure plus riche dans votre code métier.
+
+    <Aside type="note">
+        Étant donné la structure de la projection, **Panache** ne saura pas mapper automatiquement les champs. <Underline>Vous devrez donc écrire une **requête JPQL** personnalisée pour sélectionner les champs appropriés</Underline>. C'est là que l'usage des **named queries** est pertinent.
+
+        <LinkCard
+            title="Besoin d'un rappel sur les named queries ?"
+            href="/panache-orm/les-named-queries"
+        />
+    </Aside>
+
+    <Aside type="caution">
+        Vous ne pouvez pas mélanger projections "plates" et imbriquées dans une même projection. Les projections "plates" sont conçues pour des structures simples sans relations complexes, tandis que les projections imbriquées permettent de représenter des relations hiérarchiques entre entités. Choisissez l'approche qui convient le mieux à vos besoins en fonction de la complexité des données que vous souhaitez récupérer.
+
+        Dans le scénario présenté dans la partie des projections imbriqué, le nom du vaisseau était récupérable via une projection imbriquée. Ici, dans le contexte des projections "plates", le nom du vaisseau est récupéré directement comme un champ simple (`shipName`) dans la projection "plate".
+    </Aside>
+
+    <hr />
+
+3. <Highlight>Définir la méthode de mapping</Highlight>
+
+    Pour s'épargner la verbosité du mapping manuel, vous pouvez créer une classe de mapping pour transformer les résultats issu de la projection en objets correctement structurés. La librairie **MapStruct** peut être utilisée pour automatiser ce processus de mapping.
+
+    ```java title="ProjectionMapper.java"
+    @Mapper(componentModel = "cdi")
+    public interface ProjectionMapper {
+
+        @Mapping(source = "projection.shipName", target = "ship.name")
+        AstronautInfo toDTO(AstronautFlatProjection projection, List<AstronautInfo.SkillsInfo> skills);
+
+        @Mapping(source = "skillName", target = "name")
+        @Mapping(source = "skillId", target = "id")
+        AstronautInfo.SkillsInfo toDTO(AstronautFlatProjection projection);
+
+        List<AstronautInfo.SkillsInfo> toDTOList(List<AstronautFlatProjection> projections);
+    }
+    ```
+
+    <hr />
+
+4. <Highlight>Définir la named query</Highlight>
+
+    Vous pouvez définir une **named query** dans l'entité `Astronaut` pour récupérer les données nécessaires à la projection "flat" :
+
+    ```java title="Astronaut.java"
+    @Entity
+    @NamedQuery(
+        name = Astronaut.FIND_ALL,
+        query = """
+                    SELECT a.id, a.nickname, a.ship.name, s.name, s.id
+                    FROM Astronaut a
+                    JOIN a.ship
+                    JOIN a.skills s
+                """
+    )
+    public class Astronaut {
+
+        public static final String Astronaut.FIND_ALL = "Astronaut.findAll";
+
+        // Reste de l'entité
+
+    }
+    ```
+
+    <Aside type="caution">
+        Les champs sélectionnés n'ont pas besoin de correspondre aux attributs de la projection ; les noms ne sont pas pris en compte, mais l'ordre et les types doivent correspondre pour que le mapping fonctionne correctement.
+    </Aside>
+
+    <hr />
+
+5. <Highlight>Utiliser la projection dans une requête Panache</Highlight>
+
+    Ensuite, si vous souhaitez récupérer l'ensemble des astronautes avec leurs compétences, vous pouvez écrire une méthode dans votre **repository** comme suit :
+
+    ```java title="AstronautRepository.java"
+    @ApplicationScoped
+    public class AstronautRepository extends BaseRepository<Astronaut> {
+
+        public List<AstronautFullInfo> findAllAstronauts() {
+
+            List<AstronautProjection> rows = findByNamedQuery(Astronaut.FIND_ALL)
+                    .project(AstronautProjection.class)
+                    .list();
+
+            return rows.stream()
+                    .collect(Collectors.groupingBy(AstronautProjection::id))
+                    .values().stream()
+                    .map(astro -> {
+
+                        AstronautProjection astroInfo = astro.getFirst();
+                        List<SkillsBasicInfo> skills = projectionMapper.toDTOList(astro);
+                        return projectionMapper.toDTO(astroInfo, skills);
+
+                    })
+                    .toList();
+        }
+
+    }
+    ```
+
+    Ici, nous utilisons la méthode `findByNamedQuery` que l'on a défini dans le `BaseRepository` (voir l'article sur les named queries) avec le nom de la **named query** pour exécuter la requête définie précédemment. La méthode `project` est utilisée pour spécifier que nous souhaitons projeter les résultats dans la classe `AstronautFlatProjection`. La méthode `list` renvoie une liste d'objets de type `AstronautFlatProjection` contenant le nom et l'id des astronautes, leur vaisseau respectif et leurs compétences associées.
+
+    Basiquement, le résultat renvoyé par la requête sera une liste "plate" où chaque ligne correspond à un astronaute et une de ses compétences. Vous aurez donc des doublons de ses informations. Vous pouvez vous représenter cela ainsi :
+
+    | id | nickname | shipName | skillName                | skillId |
+    | -- | ---------| ------ |-------------------------| --------|
+    | 1 | Ash       | Nostromo | Informatique             | 1 |
+    | 1 | Ash       | Nostromo | Pilotage                 | 2 |
+    | 1 | Ash       | Nostromo | Combat au corps à corps  | 3 |
+    | 2 | Ripley       | Nostromo | Pilotage  | 2 |
+    | 2 | Ripley       | Nostromo | Ingénieurie  | 4 |
+    | 2 | Ripley       | Nostromo | Tir  | 5 |
+
+    Vous devrez ensuite transformer cette liste en une structure plus riche (le DTO que nous avons défini plus haut) dans votre code métier. Pour ce faire, vous pouvez utiliser la puissance des **Streams** en Java pour grouper les résultats par `id` d'astronaute (ou un autre élément unique), puis mapper chaque groupe en un objet `AstronautInfo` complet.
+
+    Par exemple, vous pouvez utiliser `Collectors.groupingBy` pour regrouper les résultats par `id`, puis pour chaque groupe, extraire les informations de l'astronaute à partir de la première ligne (puisque toutes les lignes contiennent les mêmes informations d'astronaute) et mapper la liste complète des compétences en utilisant le `ProjectionMapper`.
+
+    <Aside type="danger">
+        Pour les cas où un très grande quantité d'informations est récupérée, cette approche peut entraîner une consommation de mémoire importante. Il sera donc recommandé d'implémenter une pagination au niveau de la requête pour limiter le nombre de résultats traités en une seule fois.
+    </Aside>
+
+</Steps>
