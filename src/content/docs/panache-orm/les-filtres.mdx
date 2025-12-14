@@ -61,9 +61,11 @@ Avant toute chose, il faut savoir qu'il existe deux façons d'indiquer des filtr
 1. En utilisant des paramètres positionnels (exemple : `?1`, `?2`, etc.)
 2. En utilisant des paramètres nommés (exemple : `:paramName`)
 
-Le premier est plus simple à utiliser, mais requiert de faire attention à l'ordre des paramètres. Le second est plus verbeux, mais moins sujet aux erreurs lorsque plusieurs paramètres sont utilisés. Nous allons voir des exemples pour les deux méthodes.
+Nous allons voir des exemples pour les deux méthodes.
 
 <Aside type="tip">
+Le premier est plus simple à utiliser, mais requiert de faire attention à l'ordre des paramètres. Le second est plus verbeux, mais moins sujet aux erreurs lorsque plusieurs paramètres sont utilisés.
+
 Les bonnes pratiques recommandent d'utiliser les **paramètres nommés** pour des requêtes complexes.
 </Aside>
 
@@ -83,33 +85,42 @@ Pour lire des entités en utilisant des filtres, vous pouvez utiliser la méthod
 <Tabs>
     <TabItem label="Paramètres positionnels" icon="right-caret">
 
-    ```java
-    Alien alien = alienRepository.find("codename = ?1", "Zorg").firstResult();
+    ```java {2} title="AlienRepository.java"
+    public Alien getAlienByCodename(String codename) {
+        return find("codename = ?1", codename).firstResult();
+    }
     ```
+
     ou si l'on veut encapsuler un `NULL` potentiel :
 
-    ```java
-    Optional<Alien> alien = alienRepository.find("codename = ?1", "Zorg").firstResultOptional();
+    ```java {2} title="AlienRepository.java"
+    public Optional<Alien> getAlienByCodename(String codename) {
+        return find("codename = ?1", codename).firstResultOptional();
+    }
     ```
 
-    Le paramètre `?1` est remplacé par la valeur fournie ("Zorg" dans cet exemple).
+    Le paramètre `?1` est remplacé par la valeur fournie dans l'appel de la méthode.
 
     </TabItem>
 
     <TabItem label="Paramètres nommés" icon="right-caret">
 
-    ```java
-    Alien alien = alienRepository.find("codename = :name",
-            Parameters.with("name", "Zorg")).firstResult();
+    ```java {2} title="AlienRepository.java"
+    public Alien getAlienByCodename(String codename) {
+        return find("codename = :name", Parameters.with("name", codename)).firstResult();
+    }
     ```
+
     ou si l'on veut encapsuler un `NULL` potentiel :
 
-    ```java
-    Optional<Alien> alien = alienRepository.find("codename = :name",
-            Parameters.with("name", "Zorg")).firstResultOptional();
+    ```java {2-3} title="AlienRepository.java"
+    public Optional<Alien> getAlienByCodename(String codename) {
+        return find("codename = :name", Parameters.with("name", codename))
+            .firstResultOptional();
+    }
     ```
 
-    Le paramètre `:name` est remplacé par la valeur fournie ("Zorg" dans cet exemple).
+    Le paramètre `:name` est remplacé par la valeur fournie dans l'appel de la méthode.
 
     </TabItem>
 </Tabs>
@@ -121,40 +132,46 @@ Pour éviter les erreurs de type `NullPointerException` lorsque vous manipulez l
 
 <HR />
 
-**Pour récupérer tous les aliens dont la puissance d'attaque est supérieure à 50 :**
+**Pour récupérer tous les aliens dont la puissance d'attaque est supérieure à un nombre donné :**
 
 <Tabs>
     <TabItem label="Paramètres positionnels" icon="right-caret">
 
-    ```java
-    List<Alien> strongAliens = alienRepository.find("attackPower > ?1", 50).list();
+    ```java {2} title="AlienRepository.java"
+    public List<Alien> getPraetorianAlien(int minAttackPower) {
+        return find("attackPower > ?1", minAttackPower).list();
+    }
     ```
 
     Pour plus de concision, on peut aussi utiliser la méthode `list()` directement :
 
-    ```java
-    List<Alien> strongAliens = alienRepository.list("attackPower > ?1", 50);
+    ```java {2} title="AlienRepository.java"
+    public List<Alien> getPraetorianAlien(int minAttackPower) {
+        return list("attackPower > ?1", minAttackPower);
+    }
     ```
 
-    Le paramètre `?1` est remplacé par la valeur fournie (50 dans cet exemple).
+    Le paramètre `?1` est remplacé par la valeur fournie dans l'appel de la méthode.
 
     </TabItem>
 
     <TabItem label="Paramètres nommés" icon="right-caret">
 
-    ```java
-    List<Alien> strongAliens = alienRepository.find("attackPower > :power",
-            Parameters.with("power", 50)).list();
+    ```java {2} title="AlienRepository.java"
+    public List<Alien> getPraetorianAlien(int minAttackPower) {
+        return find("attackPower > :power", Parameters.with("power", minAttackPower)).list();
+    }
     ```
 
     Pour plus de concision, on peut aussi utiliser la méthode `list()` directement :
 
-    ```java
-    List<Alien> strongAliens = alienRepository.list("attackPower > :power",
-            Parameters.with("power", 50));
+    ```java {2} title="AlienRepository.java"
+    public List<Alien> getPraetorianAlien(int minAttackPower) {
+        return list("attackPower > :power", Parameters.with("power", minAttackPower));
+    }
     ```
 
-    Le paramètre `:power` est remplacé par la valeur fournie (50 dans cet exemple).
+    Le paramètre `:power` est remplacé par la valeur fournie dans l'appel de la méthode.
 
     </TabItem>
 </Tabs>
@@ -163,25 +180,31 @@ Pour éviter les erreurs de type `NullPointerException` lorsque vous manipulez l
 
 Si vous avez des critères multiples, vous pouvez les ajouter sans problème en utilisant les opérateurs logiques appropriés (`AND`, `OR`, etc.) comme si vous écriviez une **requête SQL classique**.
 
-**Pour compter le nombre d'aliens dont les points de vie sont entre 30 et 70 :**
+**Pour compter le nombre d'aliens dont les points de vie sont entre deux valeurs données :**
 
 <Tabs>
     <TabItem label="Paramètres positionnels" icon="right-caret">
 
-    ```java
-    long count = alienRepository.count("healthPoints between ?1 and ?2", 30, 70);
+    ```java {2} title="AlienRepository.java"
+    public long getHealthyAlien(int minHealth, int maxHealth) {
+        return count("healthPoints between ?1 and ?2", minHealth, maxHealth);
+    }
     ```
-    Les paramètres `?1` et `?2` sont remplacés par les valeurs fournies (30 et 70 dans cet exemple).
+
+    Les paramètres `?1` et `?2` sont remplacés par les valeurs fournies dans l'appel de la méthode.
 
     </TabItem>
 
     <TabItem label="Paramètres nommés" icon="right-caret">
 
-    ```java
-    long count = alienRepository.count("healthPoints between :min and :max",
-            Parameters.with("min", 30).and("max", 70));
+    ```java {2-3} title="AlienRepository.java"
+    public long getHealthyAlien(int minHealth, int maxHealth) {
+        return count("healthPoints between :min and :max",
+            Parameters.with("min", minHealth).and("max", maxHealth));
+    }
     ```
-    Les paramètres `:min` et `:max` sont remplacés par les valeurs fournies (30 et 70 dans cet exemple).
+
+    Les paramètres `:min` et `:max` sont remplacés par les valeurs fournies dans l'appel de la méthode.
 
     </TabItem>
 </Tabs>
@@ -193,26 +216,32 @@ Si vous avez des critères multiples, vous pouvez les ajouter sans problème en 
 
 Pour mettre à jour des entités en utilisant des filtres, vous pouvez utiliser la méthode `update` de Panache avec une clause `where`.
 
-**Pour mettre à jour les points de vie de tous les aliens dont le niveau de furtivité est supérieur à 5 :**
+**Pour mettre à jour les points de vie de tous les aliens dont le niveau de furtivité est supérieur à une valeur donnée :**
 
 
 <Tabs>
     <TabItem label="Paramètres positionnels" icon="right-caret">
 
-    ```java
-    alienRepository.update("healthPoints = ?1 where stealthLevel > ?2", 100, 5);
+    ```java {2} title="AlienRepository.java"
+    public int updateSneakyAlien(int healthPoints, int stealthLevel) {
+        return update("healthPoints = ?1 where stealthLevel > ?2", healthPoints, stealthLevel);
+    }
     ```
-    Les paramètres `?1` et `?2` sont remplacés par les valeurs fournies (100 et 5 dans cet exemple).
+
+    Les paramètres `?1` et `?2` sont remplacés par les valeurs fournies dans l'appel de la méthode.
 
     </TabItem>
 
     <TabItem label="Paramètres nommés" icon="right-caret">
 
-    ```java
-    alienRepository.update("healthPoints = :health where stealthLevel > :stealth",
-            Parameters.with("health", 100).and("stealth", 5));
+    ```java {2-3} title="AlienRepository.java"
+    public int updateSneakyAlien(int healthPoints, int stealthLevel) {
+        return update("healthPoints = :health where stealthLevel > :stealth",
+            Parameters.with("health", healthPoints).and("stealth", stealthLevel));
+    }
     ```
-    Les paramètres `:health` et `:stealth` sont remplacés par les valeurs fournies (100 et 5 dans cet exemple).
+
+    Les paramètres `:health` et `:stealth` sont remplacés par les valeurs fournies dans l'appel de la méthode.
 
     </TabItem>
 </Tabs>
@@ -221,27 +250,32 @@ Pour mettre à jour des entités en utilisant des filtres, vous pouvez utiliser 
 
 Si vous avez des critères multiples, vous pouvez les ajouter sans problème en utilisant les opérateurs logiques appropriés (`AND`, `OR`, etc.) comme si vous écriviez une **requête SQL classique**.
 
-**Pour mettre à jour la puissance d'attaque de tous les aliens dont les points de vie sont inférieurs à 40 et le niveau de furtivité est supérieur à 7 :**
+**Pour mettre à jour la puissance d'attaque de tous les aliens dont les points de vie sont inférieurs à une valeur donnée et le niveau de furtivité est supérieur à une autre valeur indiquée :**
 
 <Tabs>
     <TabItem label="Paramètres positionnels" icon="right-caret">
 
-    ```java
-    alienRepository.update("attackPower = ?1 where healthPoints < ?2 and stealthLevel > ?3", 75, 40, 7);
+    ```java {2} title="AlienRepository.java"
+    public int updateAttackPowerForSpecificAlien(int attackPower, int healthPoints, int stealthLevel) {
+        return update("attackPower = ?1 where healthPoints < ?2 and stealthLevel > ?3", attackPower, healthPoints, stealthLevel);
+    }
     ```
-    Les paramètres `?1`, `?2` et `?3` sont remplacés par les valeurs fournies (75, 40 et 7 dans cet exemple).
+
+    Les paramètres `?1`, `?2` et `?3` sont remplacés par les valeurs fournies dans l'appel de la méthode. Avec trois paramètres, l'utilisation des paramètres nommés est recommandée pour éviter toute confusion.
 
     </TabItem>
 
     <TabItem label="Paramètres nommés" icon="right-caret">
 
-    ```java
-    alienRepository.update("attackPower = :power where healthPoints < :health and stealthLevel > :stealth",
-            Parameters.with("power", 75)
-                      .and("health", 40)
-                      .and("stealth", 7));
+    ```java {2-5} title="AlienRepository.java"
+    public int updateAttackPowerForSpecificAlien(int attackPower, int healthPoints, int stealthLevel) {
+        return update("attackPower = :power where healthPoints < :health and stealthLevel > :stealth",
+            Parameters.with("power", attackPower)
+                .and("health", healthPoints)
+                .and("stealth", stealthLevel));
+    }
     ```
-    Les paramètres `:power`, `:health` et `:stealth` sont remplacés par les valeurs fournies (75, 40 et 7 dans cet exemple).
+    Les paramètres `:power`, `:health` et `:stealth` sont remplacés par les valeurs fournies dans l'appel de la méthode.
 
     </TabItem>
 </Tabs>
@@ -250,6 +284,8 @@ Si vous avez des critères multiples, vous pouvez les ajouter sans problème en 
 
 <Aside type="tip">
 Elle est indispensable pour les mises à jour multiples, mais aussi pour une entité unique en évitant de charger l'entité au préalable. Il suffit de s'assurer que le filtre utilisé dans la clause `where` identifie de manière unique l'entité à mettre à jour (par exemple, en utilisant son ID). Gain de performance garanti !
+
+Notez également que la méthode `update` retourne un `int` représentant le nombre d'enregistrements affectés par la mise à jour, ce qui peut être utile pour vérifier si l'opération a réussi.
 </Aside>
 
 <Aside type="caution">
@@ -261,25 +297,30 @@ Elle est indispensable pour les mises à jour multiples, mais aussi pour une ent
 
 Pour supprimer des entités en utilisant des filtres, vous pouvez utiliser la méthode `delete` de **Panache** avec une clause `where` sans avoir besoin de l'ajouter explicitement.
 
-**Pour supprimer tous les aliens dont le niveau de furtivité est à 3 :**
+**Pour supprimer tous les aliens dont le niveau de furtivité est égal à une valeur donnée :**
 
 <Tabs>
     <TabItem label="Paramètres positionnels" icon="right-caret">
 
-    ```java
-    alienRepository.delete("stealthLevel = ?1", 3);
+    ```java {2} title="AlienRepository.java"
+    public long deleteAlienBySneakiness(int stealth) {
+        return delete("stealthLevel = ?1", stealth);
+    }
     ```
-    Le paramètre `?1` est remplacé par la valeur fournie (3 dans cet exemple).
+
+    Le paramètre `?1` est remplacé par la valeur fournie dans l'appel de la méthode.
 
     </TabItem>
 
     <TabItem label="Paramètres nommés" icon="right-caret">
 
-    ```java
-    alienRepository.delete("stealthLevel = :level",
-            Parameters.with("level", 3));
+    ```java {2} title="AlienRepository.java"
+    public long deleteAlienBySneakiness(int stealth) {
+        return delete("stealthLevel = :level", Parameters.with("level", stealth));
+    }
     ```
-    Le paramètre `:level` est remplacé par la valeur fournie (3 dans cet exemple).
+
+    Le paramètre `:level` est remplacé par la valeur fournie dans l'appel de la méthode.
 
     </TabItem>
 </Tabs>
@@ -290,30 +331,39 @@ Pour supprimer des entités en utilisant des filtres, vous pouvez utiliser la m�
 
 Si vous avez des critères multiples, vous pouvez les ajouter sans problème en utilisant les opérateurs logiques appropriés (`AND`, `OR`, etc.) comme si vous écriviez une **requête SQL classique**.
 
-**Pour supprimer tous les aliens dont la puissance d'attaque est inférieure à 20 et les points de vie différents de 50 :**
+**Pour supprimer tous les aliens dont la puissance d'attaque est inférieure à une valeur donnée et les points de vie différents d'une autre valeur indiquée :**
 
 <Tabs>
     <TabItem label="Paramètres positionnels" icon="right-caret">
 
-    ```java
-    alienRepository.delete("attackPower < ?1 and healthPoints <> ?2", 20, 50);
+    ```java {2} title="AlienRepository.java"
+    public long deleteAlienWithBelowAttackAndNotHealthPoints(int attackPower, int health) {
+        return delete("attackPower < ?1 and healthPoints <> ?2", attackPower, health);
+    }
     ```
-    Les paramètres `?1` et `?2` sont remplacés par les valeurs fournies (20 et 50 dans cet exemple).
+    Les paramètres `?1` et `?2` sont remplacés par les valeurs fournies dans l'appel de la méthode.
 
     </TabItem>
 
     <TabItem label="Paramètres nommés" icon="right-caret">
 
-    ```java
-    alienRepository.delete("attackPower < :power and healthPoints <> :health",
-            Parameters.with("power", 20)).and("health", 50);
+    ```java {2-3} title="AlienRepository.java"
+    public long deleteAlienWithBelowAttackAndNotHealthPoints(int attackPower, int health) {
+        return delete("attackPower < :power and healthPoints <> :health",
+            Parameters.with("power", attackPower).and("health", health));
+    }
     ```
-    Les paramètres `:power` et `:health` sont remplacés par les valeurs fournies (20 et 50 dans cet exemple).
+
+    Les paramètres `:power` et `:health` sont remplacés par les valeurs fournies dans l'appel de la méthode.
 
     </TabItem>
 </Tabs>
 
 <HR />
+
+<Aside type="tip">
+    La méthode `delete` retourne un `long` représentant le nombre d'enregistrements supprimés, ce qui peut être utile pour vérifier si l'opération a réussi.
+</Aside>
 
 <Aside type="caution">
 La méthode `delete` avec des filtres est très puissante, mais elle doit être utilisée avec précaution pour éviter de supprimer accidentellement des données importantes. Assurez-vous toujours de bien définir vos critères dans la clause `where`, car elle peut supprimer plusieurs enregistrements à la fois.

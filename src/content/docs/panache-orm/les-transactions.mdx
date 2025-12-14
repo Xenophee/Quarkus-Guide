@@ -17,6 +17,8 @@ Si toutes les opérations réussissent → la transaction est **validée** (*com
 
 Si l’une d’elles échoue → l’ensemble est **annulé** (*rollback*), garantissant l’intégrité des données.
 
+La **transaction**, c’est un peu comme la mission d’un astronaute : tout doit se passer correctement, sinon retour immédiat sur Terre ! 🚀
+
 <Aside type="note">
     Les transactions reposent traditionnellement sur le modèle **ACID** :
 
@@ -50,9 +52,9 @@ Dans **Quarkus**, cette logique est prise en charge par **Jakarta Transactions**
 
 ### Avec l'annotation `@Transactional`
 
-L’annotation `@Transactional` permet de marquer une méthode comme transactionnelle. Lorsque cette méthode est appelée, Quarkus démarre automatiquement une transaction avant l’exécution et la valide ou l’annule à la fin. Par exemple :
+L’annotation `@Transactional` permet de marquer une méthode comme transactionnelle. Lorsque cette méthode est appelée, **Quarkus** démarre automatiquement une transaction avant l’exécution et la valide ou l’annule à la fin. Par exemple :
 
-```java
+```java {1}
 @Transactional
 public void createAstronaut(String name) {
     Astronaut astro = new Astronaut();
@@ -68,12 +70,16 @@ Il existe plusieurs options pour configurer le comportement transactionnel via `
 **Quarkus** s'appuyant sur l'implémentation de **Jakarta Transactions** pour gérer ces options, il n'y a pas autant d'options personnalisables que dans certains autres frameworks. L'annotation `@Transactional` supporte les options suivantes :
 
 1. **Transactional.TxType** : permet de spécifier le type de transaction à utiliser. Les constantes disponibles sont :
-    - `REQUIRED` : utilise la transaction existante ou en crée une nouvelle si aucune n’existe.
-    - `REQUIRES_NEW` : suspend la transaction existante et en crée une nouvelle.
-    - `MANDATORY` : exige qu’une transaction existe déjà, sinon une exception est levée.
-    - `SUPPORTS` : exécute dans le contexte de la transaction existante si elle existe, sinon sans transaction.
-    - `NOT_SUPPORTED` : suspend toute transaction existante et exécute sans transaction.
-    - `NEVER` : exécute sans transaction et lève une exception si une transaction existe.
+
+| TxType            | Description                                                                                    | Usage typique / Remarques                                                                                                            |
+| ----------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **`REQUIRED`**      | Utilise la transaction existante si elle existe ; sinon, en crée une nouvelle.                 | Le type par défaut.                                                                 |
+| **`REQUIRES_NEW`**  | Suspend la transaction existante et en crée une nouvelle.                                      | Utilisé quand vous voulez isoler une opération pour qu’elle ne soit pas affectée par la transaction courante.                        |
+| **`MANDATORY`**     | Exige qu’une transaction existe déjà ; sinon, lève une exception.                              | Pour les méthodes qui ne doivent jamais démarrer une nouvelle transaction mais doivent être appelées dans une transaction existante. |
+| **`SUPPORTS`**      | Exécute dans le contexte de la transaction existante si elle existe ; sinon, sans transaction. | Utile pour les méthodes qui peuvent fonctionner avec ou sans transaction.                                                            |
+| **`NOT_SUPPORTED`** | Suspend toute transaction existante et exécute sans transaction.                               | Pour les opérations qui ne doivent pas être transactionnelles, par exemple des logs ou des lectures non bloquantes.                  |
+| **`NEVER`**         | Exécute sans transaction et lève une exception si une transaction existe.                      | Rarement utilisé, sert à garantir qu’aucune transaction n’est active.                                                                |
+
 
 <Aside type="tip">
     Par défaut, `@Transactional` utilise `TxType.REQUIRED`, ce qui convient à la plupart des cas courants.
@@ -97,7 +103,14 @@ Panache.withTransaction(() -> {
     // autres opérations
 });
 ```
-Ici, toutes les opérations à l’intérieur du bloc seront exécutées dans une **transaction**. Si une **exception** est levée, la **transaction** sera annulée.
+Ici, toutes les opérations à l’intérieur du bloc seront exécutées dans une **transaction**. Si une **exception** est levée, la **transaction** sera annulée. Vous pouvez aussi récupérer un résultat depuis le bloc :
+
+```java
+String result = Panache.withTransaction(() -> {
+    // opérations
+    return "Mission terminée";
+});
+```
 
 <HR />
 
@@ -124,6 +137,10 @@ public void customTransaction() {
 }
 ```
 
+<Aside type="note">
+    Dans la plupart des cas, l’utilisation directe de l’`EntityTransaction` n’est pas nécessaire grâce aux abstractions fournies par **Panache**. Cet exemple vise à illustrer ce qu'il se passe en coulisses.
+</Aside>
+
 <HR />
 
 ### Bonnes pratiques
@@ -133,9 +150,11 @@ public void customTransaction() {
 </Aside>
 
 <Aside type="caution">
-    Attention à ne pas imbriquer des **transactions** de manière incorrecte, ce qui pourrait entraîner des comportements inattendus.
+    Ne laissez pas votre astronaute flotter dans l’espace transactionnel trop longtemps : finissez la mission rapidement ! 🛸
 
-    Evitez également d’effectuer des opérations non liées à la base de données à l’intérieur d’une **transaction** pour ne pas prolonger inutilement sa durée et améliorer les performances.
+    Evitez donc d’effectuer des opérations non liées à la base de données à l’intérieur d’une **transaction** pour ne pas prolonger inutilement sa durée et améliorer les performances.
+
+    Attention à ne pas imbriquer des **transactions** de manière incorrecte, ce qui pourrait entraîner des comportements inattendus.
 
     Les transactions <Underline>doivent rester focalisées sur les opérations de persistance</Underline> ; pour les simples méthodes de lecture, il n’est généralement pas nécessaire d’utiliser une transaction explicite.
 

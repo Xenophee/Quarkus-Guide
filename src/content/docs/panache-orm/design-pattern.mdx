@@ -9,9 +9,11 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 import { Underline, HR } from '@components/index';
 
 
-## C'est quoi un design pattern ?
+## Qu'est-ce qu'un design pattern ?
 
-Un **design pattern** (ou *patron de conception*) est une solution réutilisable à un problème courant dans le développement logiciel. C’est un modèle ou guide réutilisable qui permet de résoudre efficacement des problèmes similaires dans différentes situations. Les **design patterns** ne sont pas des morceaux de code spécifiques, mais plutôt des descriptions ou des templates qui peuvent être implémentés dans divers langages de programmation. Ils aident les développeurs à concevoir des systèmes logiciels robustes, maintenables et évolutifs.
+Un **design pattern** (ou *patron de conception*) est une solution réutilisable à un problème courant dans le développement logiciel. C’est un modèle ou guide réutilisable qui permet de résoudre efficacement des problèmes similaires dans différentes situations.
+
+Les **design patterns** ne sont pas des morceaux de code spécifiques, mais plutôt des descriptions ou des templates qui peuvent être implémentés dans divers langages de programmation. Ils aident les développeurs à concevoir des systèmes logiciels robustes, maintenables et évolutifs.
 
 Cet article n'a pas vocation à détailler tous les **design patterns** existants, mais plutôt à présenter ceux utilisés par **Panache ORM** dans **Quarkus** pour la gestion des entités et des opérations de persistance.
 
@@ -19,13 +21,13 @@ Cet article n'a pas vocation à détailler tous les **design patterns** existant
 
 ## Les deux approches de Panache
 
-**Panache** propose deux approches principales pour définir les entités : l’approche **Active Record** et l’approche **Repository**. La première consiste à *étendre* une classe `@Entity` avec `PanacheEntity` ou `PanacheEntityBase`, tandis que la seconde utilise des classes de **repository** dédiées pour gérer les opérations sur les entités sans les étendre directement, mais en *implémentant* des interfaces `PanacheRepository` ou `PanacheRepositoryBase`.
+**Panache** propose deux approches principales pour définir la communication avec la BDD : l’approche **Active Record** et l’approche **Repository**. La première consiste à *étendre* une classe `@Entity` avec `PanacheEntity` ou `PanacheEntityBase`, tandis que la seconde utilise des classes de **repository** dédiées pour gérer les opérations sur les entités sans les étendre directement, mais en *implémentant* des interfaces `PanacheRepository` ou `PanacheRepositoryBase`.
 
 
 
 ### L'Active Record
 
-```java "extends PanacheEntity"
+```java "extends PanacheEntity" title="Astronaut.java"
 @Entity
 @Table(name = "astronauts")
 public class Astronaut extends PanacheEntity {
@@ -33,9 +35,9 @@ public class Astronaut extends PanacheEntity {
 }
 ```
 
-Avec l'approche **Active Record** et l'extension de `PanacheEntity`, l'entité hérite automatiquement d'un identifiant de type `Long` nommé `id`. Vous n'avez donc pas besoin de définir explicitement un champ `id` dans votre classe d'entité, sauf si vous souhaitez personnaliser son comportement ou son type. Dans ce cas, vous pouvez utiliser `PanacheEntityBase` et définir votre propre champ `id`.
+Avec l'approche **Active Record** et l'extension de `PanacheEntity`, l'entité hérite automatiquement d'un identifiant de type `Long` nommé `id` qui est géré par **Panache**, mais reste un identifiant **JPA** standard. Vous n'avez donc pas besoin de définir explicitement un champ `id` dans votre classe d'entité, sauf si vous souhaitez personnaliser son comportement ou son type. Dans ce cas, vous pouvez utiliser `PanacheEntityBase` et définir votre propre champ `id`.
 
-```java {5,6} "extends PanacheEntityBase"
+```java {5,6} "extends PanacheEntityBase" title="Spaceship.java"
 @Entity
 @Table(name = "spaceships")
 public class Spaceship extends PanacheEntityBase {
@@ -50,59 +52,89 @@ public class Spaceship extends PanacheEntityBase {
 
 ### Le Repository
 
-```java "implements PanacheRepository<Astronaut>"
+```java {5,6} "implements PanacheRepository<Astronaut>" title="Astronaut.java"
 @Entity
 @Table(name = "astronauts")
 public class Astronaut {
-    // Attributs et méthodes de l'entité
-}
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id; // Identifiant explicite
+    // Autres attributs et méthodes
+}
+```
+
+```java "implements PanacheRepository<Astronaut>" title="AstronautRepository.java"
 @ApplicationScoped
 public class AstronautRepository implements PanacheRepository<Astronaut> {
     // Méthodes de gestion des utilisateurs
 }
 ```
 
-Avec l'approche **Repository**, vous devez définir explicitement un champ `id` dans votre classe d'entité, car <Underline>elle n'hérite pas automatiquement d'un identifiant</Underline>. Vous pouvez choisir le type et le nom du champ `id` selon vos besoins ; l'implémentation de `PanacheRepositoryBase` vous permet de spécifier le type de l'identifiant en tant que paramètre générique.
+Avec l'approche **Repository**, vous devez définir explicitement un champ `id` dans votre classe d'entité, car <Underline>elle n'hérite pas automatiquement d'un identifiant</Underline>. Vous pouvez choisir le type et le nom du champ `id` selon vos besoins.
 
-C'est pourquoi, dans l'exemple ci-dessous, le repository `SpaceshipRepository` implémente `PanacheRepositoryBase<Spaceship, String>`, indiquant que l'entité `Spaceship` utilise un identifiant de type `String`. Cette approche permet surtout d'établir des repositories plus génériques et réutilisables entre plusieurs entités.
+L'implémentation de `PanacheRepositoryBase` vous permet de spécifier le type de l'identifiant en tant que paramètre générique. <Underline>C'est notamment utile lorsque vous avez besoin de mettre en place une classe générique pour plusieurs entités avec des types d'identifiants différents.</Underline>
 
 <Aside type="tip">
-Dans la pratique, `PanacheRepository` est souvent suffisant.
+    `PanacheRepository` est souvent suffisant dans la majorité des cas où l’identifiant est de type `Long`.
+    `PanacheRepositoryBase` devient réellement pertinent lorsque l’on souhaite factoriser des repositories avec des types d’identifiants différents.
 </Aside>
 
-```java {5,6} "implements PanacheRepositoryBase<Spaceship, String>"
+Voici un exemple avec lequel l'utilisation de `PanacheRepositoryBase` a du sens :
+
+```java {5,6} title="Astronaut.java"
+@Entity
+@Table(name = "astronauts")
+public class Astronaut {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id; // Identifiant explicite
+    private String name;
+    // Autres attributs et méthodes
+}
+```
+
+```java {5,6} title="Spaceship.java"
 @Entity
 @Table(name = "spaceships")
 public class Spaceship {
 
     @Id
     private String shipCode; // Identifiant personnalisé
+    private String name;
     // Autres attributs et méthodes
-}
-
-@ApplicationScoped
-public class SpaceshipRepository implements PanacheRepositoryBase<Spaceship, String> {
-    // Méthodes de gestion des produits
 }
 ```
 
-Pour les utilisations de générique, vous pouvez définir des **classes abstraites** pour vos repository afin de factoriser le code commun entre plusieurs entités partageant des caractéristiques similaires. Il sera ensuite possible de créer des repositories spécifiques en étendant ces classes abstraites. Par exemple :
+Nous avons deux entités avec des types d'identifiants différents : `Long` pour `Astronaut` et `String` pour `Spaceship` et nous aimerions pouvoir récupérer l'un et l'autre par leur nom. La démarche étant similaire, nous allons créer une classe générique `BaseRepository` qui implémente `PanacheRepositoryBase<C, I>`, où `C` est le type de l'entité et `I` le type de l'identifiant afin d'y définir des méthodes communes et d'éviter la duplication de code.
 
-```java "abstract class" "extends GenericRepository<Astronaut, Long>"
-public abstract class GenericRepository<C, I> implements PanacheRepositoryBase<C, I> {
+```java {1} "abstract class" "implements PanacheRepositoryBase<C, I>" title="BaseRepository.java"
+public abstract class BaseRepository<C, I> implements PanacheRepositoryBase<C, I> {
+
     public C findByName(String name) {
         return find("name", name).firstResult();
     }
-}
 
-public class AstronautRepository extends GenericRepository<Astronaut, Long> {
-    // Méthodes spécifiques aux utilisateurs
+    // Autres méthodes communes
+
+}
+```
+
+```java "abstract class" "extends BaseRepository<Spaceship, String>" title="SpaceshipRepository.java"
+public class SpaceshipRepository extends BaseRepository<Spaceship, String> {
+    // Méthodes spécifiques aux vaisseaux spatiaux
+}
+```
+
+```java "abstract class" "extends BaseRepository<Astronaut, Long>" title="AstronautRepository.java"
+public class AstronautRepository extends BaseRepository<Astronaut, Long> {
+    // Méthodes spécifiques aux astronautes
 }
 ```
 
 <Aside type="note">
-Ces classes générique sont abstraite puisque **Quarkus** ne peut pas instancier directement une classe dont le type concret n’est pas défini à la compilation.
+Ces classes génériques sont abstraites puisque **Quarkus** ne peut pas instancier directement une classe dont le type concret n’est pas défini à la compilation.
 </Aside>
 
 <Aside type="caution">
@@ -124,6 +156,8 @@ Elles doivent être utilisées avec précaution pour éviter une complexité exc
 
 
 <Aside type="tip">
+**Active Record** ou **Repository** : deux trajectoires possibles. L’important est de choisir celle qui évite l’entrée incontrôlée dans l’atmosphère au bout de six mois.
+
 Le choix entre les deux approches dépend souvent de la complexité du projet et des préférences de l’équipe de développement, mais de manière générale, <Underline>l'approche **Repository** est préférable si l'on vise une architecture plus propre et maintenable sur le long terme</Underline>.
 
 C'est notamment le cas dans le **Domain-Driven Design (DDD)** / **Architecture hexagonale** où la séparation des préoccupations est essentielle.
