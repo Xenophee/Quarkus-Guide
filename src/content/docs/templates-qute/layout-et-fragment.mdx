@@ -1,0 +1,159 @@
+---
+title: Layouts et fragments
+description: Comment structurer vos templates avec des layouts et des fragments pour une meilleure réutilisabilité et maintenabilité.
+sidebar:
+    order: 3
+---
+
+import {Aside, TabItem, Tabs} from '@astrojs/starlight/components';
+import {Underline, HR} from '@components/index';
+
+
+Dans l'article précédent, nous avons vu comment créer des templates simples avec **Qute**. Cependant, à mesure que votre application grandit, il devient essentiel de structurer vos templates de manière efficace pour éviter la duplication de code et faciliter la maintenance. C'est là que les **sections** et les **fragments** entrent en jeu.
+
+
+## Layout
+
+Dans une application, il arrive régulièrement que certaines parties de l'interface utilisateur soient communes à plusieurs pages, comme les en-têtes, les pieds de page ou les barres de navigation. Plutôt que de dupliquer ce code dans chaque template, vous pouvez définir ces parties communes comme des **sections** réutilisables.
+
+Basiquement, il s'agit de créer des blocs de contenu dans un template qui peuvent être inclus dans d'autres templates. Cela permet de centraliser la gestion de ces éléments communs et de les modifier facilement à un seul endroit.
+
+Pour commencer, vous pouvez créer un template de base, par exemple `base.html`, qui contient la structure générale de votre page, y compris les sections communes. Voici un exemple de ce à quoi pourrait ressembler ce template de base :
+
+```html title="base.html"
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weyland-Yutani</title>
+</head>
+<body>
+    <header>
+        <h1>Bienvenue chez Weyland-Yutani</h1>
+    </header>
+    <main>
+        <p>Dans l'espace, personne ne vous entend crier...</p>
+    </main>
+    <footer>
+        <p>Tous droits réservés © Weyland-Yutani Corporation</p>
+    </footer>
+</body>
+</html>
+```
+
+Dans ce **template**, le **header** et le **footer** sont des éléments qui peuvent être amenés à être réutilisés dans d'autres pages. L'objectif serait donc de les extraire dans des sections séparées pour pouvoir les inclure facilement dans d'autres **templates**.
+
+
+### Extraction des sections communes
+
+Pour ce faire, vous pouvez créer des fichiers de template dédiés pour ces sections, par exemple `header.html` et `footer.html`, et y placer le code correspondant. Ensuite, dans votre template de base, vous pouvez inclure ces sections à l'aide de la syntaxe d'inclusion de Qute, `#include`. Par exemple, votre `base.html` pourrait ressembler à ceci après l'inclusion des sections :
+
+```html {9,13} title="base.html"
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weyland-Yutani</title>
+</head>
+<body>
+    {#include header /}
+    <main>
+        <p>Dans l'espace, personne ne vous entend crier...</p>
+    </main>
+    {#include footer /}
+</body>
+</html>
+```
+
+
+### Contenu spécifique à chaque page
+
+Très souvent, la partie centrale de votre page (le `main`) contiendra du contenu spécifique à chaque page. Vous pouvez y mettre un contenu par défaut entre les balises ou laisser un espace vide que les autres **templates** puissent y injecter leur propre contenu. Par exemple, vous pouvez définir une section dans votre **template** de base pour le contenu principal avec une syntaxe spéciale `#insert`, comme ceci :
+
+```html {11,12} title="base.html"
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weyland-Yutani</title>
+</head>
+<body>
+    {#include header /}
+    <main>
+        <h1>{#insert title}Bienvenue sur le Nostromo{/}</h1>
+        {#insert } {/}
+    </main>
+    {#include footer /}
+</body>
+</html>
+```
+
+Dans cet exemple, nous avons défini deux sections d'insertion : une pour le titre de la page et une autre pour le contenu principal. Les autres **templates** qui incluent ce `base.html` pourront alors injecter leur propre contenu dans ces sections d'insertion, ce qui permet de personnaliser chaque page tout en réutilisant la structure commune définie dans le template de base.
+
+Pour le template de la page d'accueil qui réutiliserait `base.html` par exemple, ça donnerait ceci :
+
+```html {3,5} title="home.html"
+{#include base}
+
+    {#title}J'ai décidé de redéfinir le titre par défaut{/}
+
+    <p>Je suis un paragraphe perdu dans l'espace</p>
+{/}
+```
+
+Dans ce **template**, nous incluons `base.html` et redéfinissons le contenu de la section `title` pour personnaliser le titre de la page d'accueil. Nous injectons également du contenu dans la section d'insertion principale pour afficher un paragraphe spécifique à cette page.
+
+Vous pouvez également redéfinir le titre en passant par la mécanique des **expressions**, en utilisant des variables pour rendre le **template** plus dynamique. Par exemple, dans votre `base.html`, vous pouvez remplacer la section d'insertion du titre par une expression qui utilise une variable, comme ceci :
+
+```html {11} title="base.html"
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+</head>
+<body>
+    {#include header /}
+    <main>
+        <h1>{title}</h1>
+        {#insert } {/}
+    </main>
+    {#include footer /}
+</body>
+</html>
+```
+
+Ensuite, dans votre `home.html`, vous pouvez passer une valeur pour la variable `title` lors de l'inclusion du template de base, comme ceci :
+
+```html "title="Je remplace le titre"" title="home.html"
+{#include base title="Je remplace le titre" /}
+    <p>Je suis un paragraphe perdu dans l'espace</p>
+{/}
+```
+
+<HR />
+
+## Fragments
+
+Les **fragments** sont des morceaux de code contenu dans des templates qui peuvent être rendu séparément du reste du template. Cette mécanique est particulièrement utile pour les composants dynamiques basés sur de l'Ajax. Par exemple, vous pouvez avoir un template `alien-card.html` qui contient un fragment pour afficher les informations d'un alien. Ce fragment peut être rendu indépendamment du reste du template, ce qui permet de mettre à jour dynamiquement les informations de l'alien sans avoir à recharger toute la page.
+
+Pour déclarer un fragment dans un template, vous pouvez utiliser la syntaxe `#fragment`, comme ceci :
+
+```html title="alien-card.html"
+{#fragment alienCard}
+<div id="alienCard">
+    <h2>Détails de l'alien</h2>
+    <p>Nom : {alien.name}</p>
+    <p>Espèce : {alien.species}</p>
+    <p>Planète d'origine : {alien.homeworld}</p>
+    <p>Description : {alien.description}</p>
+</div>
+{/}
+```
+
+Vous pouvez intégrer ce fragment dans un template déjà existant ou en faire un template à part entière qui ne contient que ce fragment. Ensuite, vous pouvez rendre ce fragment de manière indépendante dans votre code Java, par exemple dans une ressource REST, pour mettre à jour dynamiquement les informations de l'alien sur la page sans avoir à recharger toute la page.
+

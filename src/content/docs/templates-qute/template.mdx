@@ -1,0 +1,152 @@
+---
+title: Templates Qute
+description: Découvrez comment créer votre première page Qute dans Quarkus, en utilisant des templates pour générer du contenu dynamique.
+sidebar:
+    order: 2
+---
+
+import {Aside, TabItem, Tabs} from '@astrojs/starlight/components';
+import {Underline, HR} from '@components/index';
+
+
+Étant donné les limitations de la version `qute-web` qui ne permet pas de rendre des données dynamiques complexes dans les templates, uniquement `rest-qute` sera utilisé pour présenter et créer les page **Qute** dans cette documentation. Le renvoi de **templates** se fait <Underline>selon la même logique que le renvoi de données **JSON** ou **XML** depuis un endpoint **REST**</Underline>, à la différence que le template est rendu en **HTML** et que les données sont injectées dans le template pour générer du contenu dynamique.
+
+
+## Mise en place de Qute
+
+Une fois les dépendances ajoutées, vous pouvez commencer à utiliser **Qute** pour créer des templates. Les **templates** sont généralement placés dans le répertoire `src/main/resources/templates` de votre projet. Par exemple, vous pouvez créer un fichier `hello.html` avec le contenu suivant :
+
+```html title="hello.html"
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello Quarkonautes</title>
+</head>
+<body>
+    <h1>Hello, {name}! Seems you are ready to meet Alien!</h1>
+</body>
+</html>
+```
+
+Dans ce **template**, `{name}` est une expression qui sera remplacée par une valeur dynamique lors du rendu. Pour injecter une valeur dans cette expression, il existe deux approches : une classique et une orientée type-safety. La première approche consiste à utiliser un `Map` pour passer les données au template, tandis que la seconde approche utilise des classes **Java** pour représenter les données de manière plus structurée et sécurisée.
+
+
+### Rendu d'un template avec un `Map`
+
+L'approche la plus simple pour rendre un **template** consiste à utiliser un `Map` pour passer les données. Voici comment vous pouvez le faire :
+
+```java title="HelloResource.java"
+@Path("/hello")
+public class HelloResource {
+
+    private final Template hello;
+
+    @Inject
+    public HelloResource(Template hello) {
+        this.hello = hello;
+    }
+
+    @GET
+    @Produces(MediaType.TEXT_HTML)
+    public TemplateInstance hello() {
+        Map<String, Object> data = new HashMap<>();
+        data.put("name", "Ripley");
+        return hello.data(data);
+    }
+}
+```
+
+Dans cet exemple, nous injectons une instance de `Template` dans notre ressource **REST**. Le nom de la variable `hello` correspond au nom du template `hello.html`.
+
+Ensuite, dans la méthode `hello()`, nous créons un `Map` pour stocker les données que nous voulons injecter dans le template. Nous ajoutons une entrée avec la clé "name" et la valeur "Ripley".
+
+Enfin, nous passons ce `Map` au template pour rendre le contenu dynamique. Pour les cas de données simples comme dans l'exemple, vous pouvez aussi raccourcir le code en utilisant la méthode `data` directement avec des paires clé-valeur, comme ceci :
+
+
+```java title="HelloResource.java"
+@Path("/hello")
+public class HelloResource {
+
+    private final Template hello;
+
+    @Inject
+    public HelloResource(Template hello) {
+        this.hello = hello;
+    }
+
+    @GET
+    @Produces(MediaType.TEXT_HTML)
+    public TemplateInstance hello() {
+        return hello.data("name", "Ripley");
+    }
+}
+```
+
+<Aside type="caution">
+    Cette approche présente des inconvénients, notamment le risque d'erreurs au runtime si des données attendues sont manquantes, ou si les clés sont mal orthographiées puisqu'elles doivent correspondre à l'intitulé d'une expression dans le **template**.
+</Aside>
+
+
+
+### Rendu d'un template en type-safety
+
+Pour rendre le même template avec une approche type-safety, vous pouvez créer une classe de ressource comme suit :
+
+```java title="HelloResource.java"
+@Path("/hello")
+public class HelloResource {
+
+    @CheckedTemplate
+    public static class Templates {
+        public static native TemplateInstance hello(String name);
+    }
+
+    @GET
+    @Produces(MediaType.TEXT_HTML)
+    public TemplateInstance hello() {
+        return Templates.hello("Ripley");
+    }
+}
+```
+
+Dans cet exemple, nous utilisons l'annotation `@CheckedTemplate` pour indiquer que la classe `Templates` contient des méthodes qui correspondent à des templates **Qute**. La méthode `hello` est déclarée comme `native`, ce qui signifie qu'elle sera implémentée par le moteur de template **Qute** lors de la compilation. En paramètre de cette méthode, nous définissons les données que nous voulons injecter dans le template, dans ce cas, une chaîne de caractères `name` que l'on retrouve dans l'expression `{name}` du template `hello.html`.
+
+En appelant `Templates.hello("Ripley")`, on passe la valeur "Ripley" à l'expression `{name}` dans le template `hello.html`. Cette approche orientée type-safety offre une meilleure lisibilité et maintenabilité du code, tout en réduisant les risques d'erreurs liés à des clés manquantes ou mal orthographiées dans un `Map`.
+
+<Aside type="caution">
+    Petite subtilité à prendre en compte ici : pour être détecté, votre template doit être nommé de la même manière que la méthode statique qui le représente, et doit être placé dans un package comportant le même nom que la classe de la `Resource`.
+
+    Par exemple, si votre classe de ressource est `HelloResource.java`, alors votre template `hello.html` doit être placé dans le répertoire `src/main/resources/templates/HelloResource/`. Si votre classe de resource est situé dans un sous-package comme par exemple `com.example.rest`, cela n'aura pas d'impact sur l'emplacement du template, qui doit toujours être placé dans `src/main/resources/templates/HelloResource/` et non pas dans `src/main/resources/templates/rest/HelloResource/`.
+
+    Si ces conditions ne sont pas respectées, le moteur de template ne pourra pas trouver le template correspondant à la méthode statique, ce qui entraînera une erreur au runtime.
+</Aside>
+
+
+<Aside type="tip">
+    En utilisant des classes **Java** pour représenter les données, vous bénéficiez de la validation de type à la compilation. De plus, cette approche facilite la navigation dans le code et la compréhension de la structure des données utilisées dans les **templates**.
+
+    En résumé, privilégier une approche orientée **type-safety** est recommandée pour tirer pleinement parti des avantages de **Qute** tout en assurant la robustesse et la clarté de votre code.`
+</Aside>
+
+
+Pour organiser plus simplement et efficacement vos templates, vous pouvez également déclarer une classe `Templates` dédiée à la gestion de tous vos templates, comme ceci :
+
+```java title="Templates.java"
+@CheckedTemplate
+public class Templates {
+
+    public static native TemplateInstance hello(String name);
+    public static native TemplateInstance goodbye(String name);
+    // Ajoutez d'autres méthodes pour d'autres templates
+
+    private Templates() {}
+}
+```
+
+Avec ce système, vous pouvez placer tous vos templates dans `resources/templates` sans avoir à vous soucier de leur emplacement par rapport à la classe `Templates`, tant que les noms des méthodes correspondent aux noms des templates. Par exemple, le template `hello.html` correspondra à la méthode `hello`, et le template `goodbye.html` correspondra à la méthode `goodbye`.
+
+<Aside type="note">
+    Les deux approches pour déclarer des `@CheckedTemplate` sont combinables, vous pouvez tout à fait avoir une classe `Templates` dédiée à la gestion de tous vos templates, tout en ayant des méthodes `@CheckedTemplate` déclarées dans vos classes de ressources pour les templates spécifiques à ces ressources.
+</Aside>
