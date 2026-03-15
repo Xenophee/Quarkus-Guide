@@ -267,3 +267,44 @@ Dans ce formulaire, nous utilisons les attributs `hx-post`, `hx-target` et `hx-s
     href="https://htmx.org/"
     description="Pour en savoir plus immédiatement sur HTMX et ses fonctionnalités."
 />
+
+<HR />
+
+## Template ou Fragment ?
+
+Pour distinguer clairement quand utiliser un **template** ou un **fragment**, il est important de comprendre que les **templates** définissent généralement une vue ou un composant autonome (page, layout, ou partial réutilisable).
+
+Les **fragments**, eux, représentent une **portion d'un template existant** que l'on souhaite pouvoir rendre séparément. Ils sont utiles lorsqu'une partie d'une page doit parfois être renvoyée seule (par exemple pour une mise à jour partielle avec HTMX) sans créer un nouveau fichier de template.
+
+Si une section de votre interface est **réutilisée dans plusieurs pages** ou possède une **identité claire de composant**, il est généralement préférable de la définir dans un **template séparé** (souvent appelé partial). Cela améliore la lisibilité et la réutilisabilité.
+
+En revanche, si vous avez une **sous-partie d'une page spécifique** qui doit parfois être rendue indépendamment du reste du template, il peut être plus approprié de la définir comme un **fragment** à l'intérieur du template existant.
+
+Voici un tableau récapitulatif pour vous aider à choisir entre un **template** et un **fragment** :
+
+
+| Situation | Template séparé | Fragment dans le template | Pourquoi |
+|---|---|---|---|
+| Bloc réutilisé dans plusieurs pages | ✅ Oui | ❌ Non | Un composant partagé doit avoir son propre fichier |
+| Bloc spécifique à une seule page | ❌ Pas nécessaire | ✅ Oui | Pas besoin de créer un fichier juste pour ça |
+| Bloc rendu seul depuis Java (endpoint dédié) | ✅ Très bien | ✅ Possible | Les deux fonctionnent |
+| Bloc avec une vraie identité UI (card, options, row…) | ✅ Oui | ⚠️ Possible mais moins clair | Composant autonome |
+| Petit morceau de markup local à une page | ❌ Non | ✅ Oui | Fragment plus simple |
+| Gros bloc HTML complexe | ✅ Oui | ❌ Éviter | Lisibilité et maintenance |
+| Mise à jour partielle HTMX | ✅ Très bien | ✅ Très bien | Les deux marchent |
+| Bloc utilisé uniquement dans une page mais rerendu souvent | ⚖️ Au choix | ⚖️ Au choix | Question de lisibilité |
+| Besoin de séparer clairement la structure de page | ✅ Oui | ❌ Non | Meilleure organisation |
+
+<HR />
+
+| Si le bloc est… | Utilisez |
+|---|---|
+| un composant réutilisable | Template |
+| une sous-partie locale d'une page | Fragment |
+| un partial HTMX autonome | Template |
+| un petit bloc interne à une page | Fragment |
+
+
+<Aside type="tip">
+    Un fragment n’est pas un composant réutilisable par défaut : c’est avant tout un point de découpage dans un template existant.
+</Aside>
