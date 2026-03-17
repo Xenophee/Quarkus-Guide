@@ -270,6 +270,122 @@ Dans ce formulaire, nous utilisons les attributs `hx-post`, `hx-target` et `hx-s
 
 <HR />
 
+
+## Tags
+
+Les tags sont une autre fonctionnalité de **Qute** qui permet de définir des blocs de contenu réutilisables dans vos **templates**. Contrairement aux **fragments**, les **tags** sont définis comme des templates avec une logique spécifique. Par exemple, vous pouvez créer un **tag** pour afficher une carte d'astronaute avec des informations spécifiques, comme ceci :
+
+```html title="card.html"
+<div>
+    <h2>{it.name}</h2>
+    <p>Âge : {it.age}</p>
+    <p>Mission : {it.mission}</p>
+</div>
+```
+
+`it` est une variable spéciale qui représente les données passées au **tag** lors de son utilisation. Vous pouvez ensuite utiliser ce **tag** dans vos autres **templates** pour afficher les informations d'un astronaute de manière réutilisable, comme ceci :
+
+```html title="astronaut.html"
+{#for astro in astronauts}
+    {#card astro /}
+{/for}
+```
+
+Dans cet exemple, nous utilisons le **tag** `card` pour afficher les informations de chaque astronaute dans la liste `astronauts`. Les données de chaque astronaute sont passées au **tag** via la variable `it` qui va récupérer `astro` que l'on a passé en paramètre du **tag**, ce qui permet de rendre le contenu de manière dynamique en fonction des données fournies.
+
+Basiquement, nous aurions pu obtenir la même chose en passant par le mécanisme des `#include` et `#insert`, mais les **tags** offrent une syntaxe plus concise et claire pour ce type de cas d'utilisation, autrement dit lorsque vous avez des composants réutilisables avec une logique propre.
+
+<Aside type="note">
+    Pour être reconnu comme un **tag**, le template doit être placé dans un dossier spécifique nommé `tags` à la racine de votre dossier de templates. Par exemple, si vous avez un template `card.html` qui définit un **tag**, il doit être placé dans `src/main/resources/templates/tags/card.html` pour être correctement détecté et utilisé dans vos autres templates.
+
+    Si vous placez votre template de **tag** dans un autre dossier, il ne sera pas reconnu comme un **tag** et vous ne pourrez pas l'utiliser avec la syntaxe `{#card ... /}`. A noter également que l'utilisation de sous dossier dans les tags n'est pas supportée, donc tous les templates de **tags** doivent être directement dans le dossier `tags` sans sous-dossier.
+
+    Si vous avez besoin de plus d'organisation, vous pouvez toujours utiliser des conventions de nommage pour différencier les types de **tags** (par exemple `card_astronaut.html`, `card_ship.html`, etc.) ou utiliser des préfixes pour indiquer leur fonction, mais ils doivent tous être dans le même dossier `tags` pour être reconnus comme tels.
+</Aside>
+
+
+### Ajouter du contenu dans un tag
+
+Il est possible d'ajouter du contenu dans un **tag** en utilisant la syntaxe d'insertion `#insert` à l'intérieur du **tag** lui-même, comme nous l'avons vu pour les templates. Toutefois, dans le cadre des **tags**, il existe une syntaxe plus spécifique pour ajouter du contenu supplémentaire, qui est d'utiliser le mot clef `nested-content`, comme ceci :
+
+```html title="card.html"
+<div>
+    <h2>{it.name}</h2>
+    <p>Âge : {it.age}</p>
+    <p>Mission : {it.mission}</p>
+    {nested-content}
+</div>
+```
+
+Ainsi, à l'utilisation du **tag**, vous pouvez ajouter du contenu supplémentaire qui sera inséré à l'endroit où se trouve le `nested-content`, comme ceci :
+
+```html title="astronaut.html"
+{#for astro in astronauts}
+    {#card astro}
+        <p>Statut : {astro.status}</p>
+    {/card}
+{/for}
+```
+
+### Rendre l'affichage d'un tag conditionnel
+
+Pour rendre l'affichage d'un tag conditionnel en fonction de certaines données, vous pouvez utiliser la syntaxe de condition `#if` à l'intérieur du **tag** lui-même, comme ceci :
+
+```html title="astronaut.html"
+{#for astro in astronauts}
+    {#if astro.status == 'active'}
+        {#card astro /}
+    {/if}
+{/for}
+```
+
+Mais vous pouvez aussi utiliser la syntaxe de condition directement dans le **tag**, comme ceci :
+
+```html title="card.html"
+{#if it.status == status}
+    <div>
+        <h2>{it.name}</h2>
+        <p>Âge : {it.age}</p>
+        <p>Mission : {it.mission}</p>
+    </div>
+{/if}
+```
+
+Dans cet exemple, nous avons ajouté une condition `#if` à l'intérieur du **tag** `card` pour n'afficher la carte que si le statut de l'astronaute correspond à une certaine valeur. Vous pouvez ensuite utiliser ce **tag** dans vos autres **templates** en passant la valeur du statut que vous souhaitez filtrer, comme ceci :
+
+```html title="astronaut.html"
+{#for astro in astronauts}
+    {#card astro status="active" /}
+{/for}
+```
+
+Dans cet exemple, nous avons passé la valeur `active` pour le paramètre `status` du **tag** `card`, ce qui signifie que seules les cartes des astronautes ayant un statut actif seront affichées.
+
+
+
+### Isolation des données
+
+Par défaut, les **tags** sont isolés des données du template parent, ce qui signifie que les variables définies dans le template parent ne sont pas accessibles à l'intérieur du **tag**. Cependant, il est possible de désactivé cette inaccessibilité par défaut en utilisant le mot clef `_unisolated`, comme ceci :
+
+```html title="astronaut.html"
+{#for astro in astronauts}
+    {#card astro _unisolated}
+        <p>Vaisseau : {ship.name}</p>
+    {/card}
+{/for}
+```
+
+Dans cet exemple, nous avons utilisé le mot clef `_unisolated` pour permettre au **tag** `card` d'accéder à la variable `ship` définie dans le template parent. Cela peut être utile dans certains cas où vous souhaitez que le **tag** puisse accéder à des données spécifiques du template parent.
+
+<Aside type="caution">
+    Gardez également à l'esprit que si le **tag** utilise une variable d'un template grand parent et que vous utilisez des `CheckedTemplate`, vous devrez peut-être ajouter des paramètres supplémentaires à votre méthode de ressource en charge du template parent pour passer ces données au **tag** de manière type-safe.
+
+    Il est donc important d'utiliser ce mécanisme avec précaution pour éviter les problèmes de maintenance et de lisibilité du code, sachant que l'isolation des données est généralement une bonne pratique pour garantir la réutilisabilité et la modularité de vos **tags**.
+</Aside>
+
+
+<HR />
+
 ## Template ou Fragment ?
 
 Pour distinguer clairement quand utiliser un **template** ou un **fragment**, il est important de comprendre que les **templates** définissent généralement une vue ou un composant autonome (page, layout, ou partial réutilisable).
