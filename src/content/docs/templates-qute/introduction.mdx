@@ -93,9 +93,7 @@ Pour optimiser vos build et vous passez de **Node.js**, vous pouvez recourir à 
   <Tabs>
     <TabItem label="Maven" icon="seti:maven">
 
-    Si vous utilisez **Maven** comme gestionnaire de dépendances, voici les dépendances à ajouter dans votre fichier `pom.xml` :
-
-        Pour l'utilisation de `quarkus-web-bundler` :
+    Si vous utilisez **Maven** comme gestionnaire de dépendances, voici la dépendance à ajouter dans votre fichier `pom.xml` pour l'utilisation de `quarkus-web-bundler` :
 
         ```xml
         <dependency>
@@ -108,9 +106,7 @@ Pour optimiser vos build et vous passez de **Node.js**, vous pouvez recourir à 
     </TabItem>
     <TabItem label="Gradle" icon="seti:gradle">
 
-    Si vous utilisez **Gradle**, ajoutez la dépendance suivante dans votre fichier `build.gradle.kts` :
-
-        Pour l'utilisation de `quarkus-web-bundler` :
+    Si vous utilisez **Gradle**, ajoutez la dépendance suivante dans votre fichier `build.gradle.kts` pour l'utilisation de `quarkus-web-bundler` :
 
         ```kotlin
         implementation("io.quarkiverse.web-bundler:quarkus-web-bundler:2.2.1")
@@ -128,3 +124,13 @@ Pour optimiser vos build et vous passez de **Node.js**, vous pouvez recourir à 
     </Aside>
 
 </Card>
+
+Avec cette dépendance, vous n'avez plus qu'à indiquer le mot clef `bundle` dans le `head` de votre **template** pour que les **assets** soient automatiquement regroupés et optimisés lors du build de votre application, comme ceci :
+
+```html {4} title="index.html"
+<head>
+    <meta charset="UTF-8">
+    <title>Alien Optimisation</title>
+    {#bundle /}
+</head>
+```
