@@ -8,19 +8,24 @@ sidebar:
 import {Aside, TabItem, Tabs, LinkCard} from '@astrojs/starlight/components';
 import {Underline, HR} from '@components/index';
 
-**Qute** vous permet de créer des composants réutilisables appelés **tags**. Ce sont des blocs de code qui peuvent être utilisés dans vos templates pour éviter la duplication et améliorer la maintenabilité de votre projet.
+**Qute** permet de créer des composants réutilisables appelés **tags**.
 
-Contrairement aux **fragments**, les **tags** sont définis comme des templates avec une logique propre et doivent être placés dans un dossier spécifique nommé `tags` à la racine de votre dossier de templates. Ils peuvent être utilisés dans vos autres templates en utilisant une syntaxe spéciale qui permet de les appeler directement par leur nom.
+Un **tag** est un **template** spécialisé, conçu pour encapsuler un bloc d'affichage réutilisable. Il permet d'éviter la duplication de code et d'améliorer la lisibilité ainsi que la maintenabilité de vos **templates**.
+
+Contrairement aux **fragments**, qui sont définis à l'intérieur d'un **template** existant, les **tags** sont des **templates** indépendants, pensés pour être réutilisés dans toute l'application.
+
+Ils doivent être placés dans le répertoire : `src/main/resources/templates/tags` et peuvent ensuite être utilisés directement par leur nom.
 
 <Aside type="note">
-    A noter également que l'utilisation de sous dossier dans les tags ne semble pas supportée, donc tous les templates de **tags** doivent être directement dans le dossier `tags` sans sous-dossier.
+    Par défaut, il est recommandé de placer vos tags directement dans ce dossier. Si vous avez besoin d'organisation, vous pouvez utiliser des conventions de nommage, par exemple :
 
-    Si vous avez besoin de plus d'organisation, vous pouvez toujours utiliser des conventions de nommage pour différencier les types de **tags** (par exemple `card_astronaut.html`, `card_ship.html`, etc.) ou utiliser des préfixes pour indiquer leur fonction, mais ils doivent tous être dans le même dossier `tags` pour être reconnus comme tels.
+    - `card_astronaut.html`
+    - `card_ship.html`
 </Aside>
 
 ## Créer un tag
 
-Par commencer, vous pouvez créer un **tag** pour afficher une carte d'astronaute avec des informations spécifiques, comme ceci :
+Pour commencer, créons un tag permettant d'afficher une carte d'astronaute :
 
 ```html title="card.html"
 <div>
@@ -30,9 +35,9 @@ Par commencer, vous pouvez créer un **tag** pour afficher une carte d'astronaut
 </div>
 ```
 
-`it` est une variable spéciale qui représente les données passées au **tag** lors de son utilisation.
+La **variable** `it` représente le contexte du **tag**, <Underline>c'est-à-dire l'objet passé lors de son appel</Underline>.
 
-Vous pouvez ensuite utiliser ce **tag** dans vos autres **templates** pour afficher les informations d'un astronaute de manière réutilisable, comme ceci, en utilisant directement le nom du tag (donc le nom du template sans l'extension `.html`) :
+Vous pouvez ensuite utiliser ce **tag** dans un autre template :
 
 ```html {2} title="astronaut.html"
 {#for astro in astronauts}
@@ -40,15 +45,17 @@ Vous pouvez ensuite utiliser ce **tag** dans vos autres **templates** pour affic
 {/for}
 ```
 
-Dans cet exemple, nous utilisons le **tag** `card` pour afficher les informations de chaque astronaute dans la liste `astronauts`. Les données de chaque astronaute sont passées au **tag** via la variable `it` qui va récupérer `astro` que l'on a passé en paramètre du **tag**, ce qui permet de rendre le contenu de manière dynamique en fonction des données fournies.
+Ici, chaque objet `astro` est transmis au **tag** et devient accessible via `it`.
 
-Basiquement, nous aurions pu obtenir la même chose en passant par le mécanisme des `#include` et `#insert`, mais les **tags** offrent une syntaxe plus concise et claire pour ce type de cas d'utilisation.
+Concrètement, cela permet d'encapsuler un bloc **HTML** réutilisable avec une syntaxe claire et concise.
 
 <HR />
 
 ## Ajouter du contenu dans un tag
 
-Il est possible d'ajouter du contenu dans un **tag** en utilisant la syntaxe d'insertion `#insert` à l'intérieur du **tag** lui-même, [comme nous l'avons vu pour les templates](/templates-qute/layout-et-fragment/#la-commande-insert). Toutefois, dans le cadre des **tags**, il existe une syntaxe plus spécifique pour ajouter du contenu supplémentaire, qui est d'utiliser le mot clef `nested-content`, comme ceci :
+Un **tag** peut également accepter du contenu supplémentaire, injecté au moment de son utilisation.
+
+Pour cela, **Qute** propose la **variable** spéciale `nested-content`, qui agit comme un **slot dynamique**.
 
 ```html {5} title="card.html"
 <div>
@@ -59,7 +66,7 @@ Il est possible d'ajouter du contenu dans un **tag** en utilisant la syntaxe d'i
 </div>
 ```
 
-Ainsi, à l'utilisation du **tag**, vous pouvez ajouter du contenu supplémentaire qui sera inséré à l'endroit où se trouve le `nested-content`, comme ceci :
+Lors de l'appel du tag, vous pouvez fournir du contenu :
 
 ```html title="astronaut.html"
 {#for astro in astronauts}
@@ -69,11 +76,20 @@ Ainsi, à l'utilisation du **tag**, vous pouvez ajouter du contenu supplémentai
 {/for}
 ```
 
+Ce contenu sera injecté à l'emplacement de `nested-content`.
+
+<Aside type="note">
+    Cela fonctionne de manière similaire à `#insert`, mais est spécifiquement adapté aux **tags**.
+</Aside>
+
+
 <HR />
 
 ## Rendre l'affichage d'un tag conditionnel
 
-Pour rendre l'affichage d'un tag conditionnel en fonction de certaines données, vous pouvez utiliser la syntaxe de condition `#if` à l'extérieur du **tag** comme ceci :
+Il est possible de rendre l'affichage d'un tag conditionnel en fonction de certaines données.
+
+La première approche consiste à appliquer la condition directement dans le **template** appelant :
 
 ```html title="astronaut.html"
 {#for astro in astronauts}
@@ -83,7 +99,7 @@ Pour rendre l'affichage d'un tag conditionnel en fonction de certaines données,
 {/for}
 ```
 
-Mais surtout, vous pouvez aussi utiliser la syntaxe de condition directement dans le **tag**, comme ceci :
+Cependant, il est souvent préférable d'intégrer cette logique directement dans le **tag** lui-même afin de centraliser le comportement.
 
 ```html title="card.html"
 {#if it.status == status}
@@ -95,7 +111,12 @@ Mais surtout, vous pouvez aussi utiliser la syntaxe de condition directement dan
 {/if}
 ```
 
-Dans cet exemple, nous avons ajouté une condition `#if` à l'intérieur du **tag** `card` pour n'afficher la carte que si le statut de l'astronaute correspond à une certaine valeur. Vous pouvez ensuite utiliser ce **tag** dans vos autres **templates** en passant la valeur du statut que vous souhaitez filtrer, comme ceci :
+Ici :
+
+- `it` représente l'objet passé au **tag** (l'astronaute)
+- `status` est un **paramètre** du **tag**
+
+Vous pouvez ensuite utiliser ce **tag** en lui passant une valeur :
 
 ```html {2} title="astronaut.html"
 {#for astro in astronauts}
@@ -103,13 +124,27 @@ Dans cet exemple, nous avons ajouté une condition `#if` à l'intérieur du **ta
 {/for}
 ```
 
-Dans cet exemple, nous avons passé la valeur `active` pour le paramètre `status` du **tag** `card`, ce qui signifie que seules les cartes des astronautes ayant un statut actif seront affichées.
+Seuls les astronautes ayant un statut "active" seront affichés.
+
+Cette approche permet de créer des **tags** plus intelligents et réutilisables, en encapsulant la logique directement dans le composant.
 
 <HR />
 
 ## Isolation des données
 
-Par défaut, les **tags** sont isolés des données du template parent, ce qui signifie que les variables définies dans le template parent ne sont pas accessibles à l'intérieur du **tag**. Cependant, il est possible de désactivé cette inaccessibilité par défaut en utilisant le mot clef `_unisolated`, comme ceci :
+Par défaut, les **tags** sont isolés du contexte dans lequel ils sont utilisés.
+
+Cela signifie que seules les données explicitement passées au **tag** sont accessibles. Les **variables** du **template** parent ne sont pas visibles.
+
+Ce comportement est volontaire et permet de garantir :
+
+- une meilleure encapsulation
+- une meilleure réutilisabilité
+- moins d'effets de bord
+
+Cependant, dans certains cas, vous pouvez avoir besoin d'accéder aux données du **template** parent.
+
+Pour cela, vous pouvez utiliser le mot-clé `_unisolated` :
 
 ```html title="astronaut.html"
 {#for astro in astronauts}
@@ -119,10 +154,19 @@ Par défaut, les **tags** sont isolés des données du template parent, ce qui s
 {/for}
 ```
 
-Dans cet exemple, nous avons utilisé le mot clef `_unisolated` pour permettre au **tag** `card` d'accéder à la variable `ship` définie dans le template parent. Cela peut être utile dans certains cas où vous souhaitez que le **tag** puisse accéder à des données spécifiques du template parent.
+Ici, le **tag** peut accéder à la **variable** `ship` définie dans le **template** parent.
 
 <Aside type="caution">
-    Gardez également à l'esprit que si le **tag** utilise une variable d'un template grand parent et que vous utilisez des `CheckedTemplate`, vous devrez peut-être ajouter des paramètres supplémentaires à votre méthode de ressource en charge du template parent pour passer ces données au **tag** de manière type-safe.
+    Cela peut rendre le code plus difficile à comprendre et à maintenir. Il est donc recommandé de privilégier le passage explicite des données en paramètres.
 
-    Il est donc important d'utiliser ce mécanisme avec précaution pour éviter les problèmes de maintenance et de lisibilité du code, sachant que l'isolation des données est généralement une bonne pratique pour garantir la réutilisabilité et la modularité de vos **tags**.
+    Par exemple :
+    ```html
+    {#card astro ship=ship /}
+    ```
+
+    Cette approche est plus claire et compatible avec une utilisation type-safe.
 </Aside>
+
+Lorsque vous utilisez une approche **type-safe** avec `@CheckedTemplate`, seules les données définies dans la signature de la méthode sont connues à la compilation.
+
+Si votre **tag** dépend de données externes (comme ship), vous devez les passer explicitement en **paramètre**. Sinon, **Qute** ne pourra pas valider correctement le **template** au **build**.

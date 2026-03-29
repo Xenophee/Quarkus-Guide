@@ -9,11 +9,13 @@ import {Aside, TabItem, Tabs, FileTree} from '@astrojs/starlight/components';
 import {Underline, HR} from '@components/index';
 
 
-Étant donné les limitations de la version `qute-web` qui ne permet pas de rendre des données dynamiques complexes dans les templates, uniquement `rest-qute` sera utilisé pour présenter et créer les page **Qute** dans cette documentation. Le renvoi de **templates** se fait <Underline>selon la même logique que le renvoi de données **JSON** ou **XML** depuis un endpoint **REST**</Underline>, à la différence que le template est rendu en **HTML** et que les données sont injectées dans le template pour générer du contenu dynamique.
+Étant donné certaines limitations de l'extension `qute-web`, notamment sa capacité réduite à gérer des données dynamiques complexes, nous utiliserons uniquement `rest-qute` dans cette documentation afin de créer et rendre des pages **Qute**.
 
+Avec `rest-qute`, le rendu d'un **template** suit une logique très proche de celle d'un **endpoint REST** classique : de la même manière que vous retourneriez du **JSON** ou du **XML**, vous retournez ici du **HTML** généré dynamiquement. La différence réside dans le fait que les données sont injectées dans un **template** afin de produire une vue côté serveur.
 
+Une fois les dépendances ajoutées, vous pouvez commencer à créer vos **templates**. Ceux-ci sont généralement placés dans le répertoire `src/main/resources/templates` de votre projet.
 
-Une fois les dépendances ajoutées, vous pouvez commencer à utiliser **Qute** pour créer des templates. Les **templates** sont généralement placés dans le répertoire `src/main/resources/templates` de votre projet. Par exemple, vous pouvez créer un fichier `hello.html` avec le contenu suivant :
+Par exemple, créez un fichier hello.html :
 
 ```html title="hello.html"
 <!DOCTYPE html>
@@ -29,12 +31,15 @@ Une fois les dépendances ajoutées, vous pouvez commencer à utiliser **Qute** 
 </html>
 ```
 
-Dans ce **template**, `{name}` est une expression qui sera remplacée par une valeur dynamique lors du rendu. Pour injecter une valeur dans cette expression, il existe deux approches : une classique et une orientée type-safety. La première approche consiste à utiliser un `Map` pour passer les données au template, tandis que la seconde approche utilise des classes **Java** pour représenter les données de manière plus structurée et sécurisée.
+Pour injecter des données dans un **template**, deux approches principales existent :
+
+- une approche simple basée sur une structure clé-valeur (Map)
+- une approche orientée type-safety, basée sur des classes Java
 
 
 ## Rendu d'un template avec un `Map`
 
-L'approche la plus simple pour rendre un **template** consiste à utiliser un `Map` pour passer les données. Voici comment vous pouvez le faire :
+L'approche la plus simple consiste à utiliser un `Map` pour transmettre les données au **template** :
 
 ```java title="HelloResource.java"
 @Path("/hello")
@@ -57,11 +62,13 @@ public class HelloResource {
 }
 ```
 
-Dans cet exemple, nous injectons une instance de `Template` dans notre ressource **REST**. Le nom de la variable `hello` correspond au nom du template `hello.html`.
+Dans cet exemple, nous injectons une instance de `Template` dans notre **ressource REST**. Le nom de la **variable** `hello` correspond au nom du fichier `hello.html`.
 
-Ensuite, dans la méthode `hello()`, nous créons un `Map` pour stocker les données que nous voulons injecter dans le template. Nous ajoutons une entrée avec la clé "name" et la valeur "Ripley".
+Dans la méthode `hello()`, nous créons un `Map` contenant les données à injecter dans le **template**, ici une entrée "name" avec la valeur "Ripley".
 
-Enfin, nous passons ce `Map` au template pour rendre le contenu dynamique. Pour les cas de données simples comme dans l'exemple, vous pouvez aussi raccourcir le code en utilisant la méthode `data` directement avec des paires clé-valeur, comme ceci :
+Ces données sont ensuite transmises au **template** pour générer le contenu HTML dynamique.
+
+Pour des cas simples, vous pouvez utiliser une syntaxe plus concise en passant directement des paires clé-valeur :
 
 
 ```java title="HelloResource.java"
@@ -89,13 +96,15 @@ public class HelloResource {
 
 <HR />
 
-## Rendu d'un template en type-safety
+## Rendu d'un template de manière type-safe
 
-L'objectif de cette approche est de rendre le même **template** que précédemment, mais en utilisant une approche orientée **type-safety** pour injecter les données dans le template. Cela permet d'améliorer la lisibilité et la maintenabilité du code, tout en réduisant les risques d'erreurs liés à des clés manquantes ou mal orthographiées dans un `Map`.
+L'objectif de cette approche est de rendre le même **template** que précédemment, mais en utilisant une approche **type-safe** pour injecter les données.
+
+Cela permet d'améliorer la lisibilité et la maintenabilité du code, tout en évitant les erreurs liées à des clés manquantes ou mal orthographiées, comme c'est le cas avec un `Map`.
 
 ### Principe de base
 
-Pour rendre le même **template** avec une approche **type-safety**, vous pouvez créer une classe de ressource comme suit :
+Pour adopter une approche typée avec **Qute**, vous pouvez définir une **classe** comme suit :
 
 ```java title="HelloResource.java"
 @Path("/hello")
@@ -114,28 +123,41 @@ public class HelloResource {
 }
 ```
 
-Dans cet exemple, nous utilisons l'annotation `@CheckedTemplate` pour indiquer que la classe `Templates` contient des méthodes qui correspondent à des templates **Qute**. La méthode `hello` est déclarée comme `native`, ce qui signifie qu'elle sera implémentée par le moteur de template **Qute** lors de la compilation. En paramètre de cette méthode, nous définissons les données que nous voulons injecter dans le **template**, dans ce cas, une chaîne de caractères `name` que l'on retrouve dans l'expression `{name}` du template `hello.html`.
+Ici, l'annotation `@CheckedTemplate` indique que la classe `Templates` contient des **méthodes** associées à des **templates Qute**.
 
-En appelant `Templates.hello("Ripley")`, on passe la valeur "Ripley" à l'expression `{name}` dans le template `hello.html`. <Underline>Cette approche orientée **type-safety** offre une meilleure lisibilité et maintenabilité du code, tout en réduisant les risques d'erreurs liés à des clés manquantes ou mal orthographiées dans un `Map`</Underline>.
+La méthode `hello` est déclarée comme `native` : elle sera générée automatiquement par **Qute** lors du **build**. Ses paramètres définissent les données injectées dans le **template**.
+
+Dans cet exemple, le paramètre `name` est directement lié à l'expression `{name}` présente dans le fichier `hello.html`.
+
+Lorsque vous appelez `Templates.hello("Ripley")`, la valeur "*Ripley*" est injectée dans le **template**.
+
+Contrairement à l'approche basée sur un `Map`, cette méthode est vérifiée à la compilation. Si le **template** ou les paramètres ne correspondent pas, une erreur sera levée dès le **build** de l'application, et non au **runtime**.
 
 <Aside type="caution">
-    Petite subtilité à prendre en compte ici : pour être détecté, votre **template** doit être nommé de la même manière que la **méthode statique** qui le représente, et doit être placé dans un package comportant le même nom que la classe de la `Resource`.
+    Il est important de respecter certaines conventions pour que **Qute** puisse générer correctement le code correspondant à votre **template** :
+    - le nom de la **méthode** doit correspondre au nom du fichier **template**
+    - le **template** doit être placé dans : `src/main/resources/templates/{NomDeLaClasse}/`
 
-    Par exemple, si votre classe de ressource est `HelloResource.java`, alors votre **template** `hello.html` doit être placé dans le répertoire `src/main/resources/templates/HelloResource/`. Si votre classe de resource est situé dans un sous-package comme par exemple `com.example.rest`, cela n'aura pas d'impact sur l'emplacement du **template**, qui doit toujours être placé dans `src/main/resources/templates/HelloResource/` et non pas dans `src/main/resources/templates/rest/HelloResource/`.
+    Par exemple :
 
-    Si ces conditions ne sont pas respectées, le moteur de template ne pourra pas trouver le **template** correspondant à la méthode statique, ce qui entraînera une erreur au runtime.
+    - classe : `HelloResource`
+    - méthode : `hello`
+    - template : `templates/HelloResource/hello.html`
+
+    <Underline>Si ces conventions ne sont pas respectées, **Qute** ne pourra pas générer le code correspondant, ce qui entraînera une erreur au **build**.</Underline>
 </Aside>
 
 
 <Aside type="tip">
     En utilisant des classes **Java** pour représenter les données, vous bénéficiez de la validation de type à la compilation. De plus, cette approche facilite la navigation dans le code et la compréhension de la structure des données utilisées dans les **templates**.
 
-    En résumé, privilégier une approche orientée **type-safety** est recommandée pour tirer pleinement parti des avantages de **Qute** tout en assurant la robustesse et la clarté de votre code.`
+    En résumé, privilégier une approche orientée **type-safety** est recommandée pour tirer pleinement parti des avantages de **Qute** tout en assurant la robustesse et la clarté de votre code.
 </Aside>
+
 
 ### Organisation des templates
 
-Pour organiser plus simplement et efficacement vos **templates**, vous pouvez également déclarer une classe `Templates` dédiée à la gestion de tous vos **templates**, comme ceci :
+Pour mieux structurer votre projet, vous pouvez centraliser vos **templates** dans une **classe** dédiée :
 
 ```java title="Templates.java"
 @CheckedTemplate
@@ -149,14 +171,14 @@ public class Templates {
 }
 ```
 
-Avec ce système, vous pouvez placer tous vos **templates** dans `resources/templates` sans avoir à vous soucier de leur emplacement par rapport à la classe `Templates`, <Underline>tant que les noms des méthodes correspondent aux noms des **templates**</Underline>. Par exemple, le template `hello.html` correspondra à la méthode `hello`, et le template `goodbye.html` correspondra à la méthode `goodbye`.
+Dans ce cas, les templates sont recherchés directement dans : `src/main/resources/templates/`
 
-<Aside type="note">
-    Les deux approches pour déclarer des `@CheckedTemplate` sont combinables, vous pouvez tout à fait avoir une classe `Templates` dédiée à la gestion de tous vos **templates**, tout en ayant des méthodes `@CheckedTemplate` déclarées dans vos classes de ressources pour les **templates** spécifiques à ces ressources.
-</Aside>
+Chaque méthode correspond à un fichier :
 
-Pour plus d'organisation, et si vous avez beaucoup de **templates**, vous pouvez également créer des sous-dossiers par type de template (par exemple `pages`, `fragments`, `tags`, etc.) :
+- `hello` → `hello.html`
+- `goodbye` → `goodbye.html`
 
+Pour des projets plus structurés, vous pouvez organiser vos **templates** par catégorie :
 
 <FileTree>
 
@@ -171,7 +193,7 @@ Pour plus d'organisation, et si vous avez beaucoup de **templates**, vous pouvez
 
 </FileTree>
 
-Et créer une classe `Templates` dédiée à chaque type de **template** en précisant le `basePath` de l'annotation `@CheckedTemplate`, comme ceci :
+Dans ce cas, vous pouvez utiliser l'attribut `basePath` :
 
 ```java title="Pages.java"
 @CheckedTemplate(basePath = "Pages")
@@ -185,7 +207,7 @@ public class Pages {
 }
 ```
 
-Si vous ne souhaitez pas multiplier les classes, vous pouvez aussi bien faire une classe `Template` qui contiendra tous les **templates** de votre projet, en utilisant des classes imbriquées pour différencier les types de **templates**, comme ceci :
+Vous pouvez également regrouper ces **classes** dans une structure imbriquée :
 
 ```java title="Templates.java"
 @CheckedTemplate
@@ -208,4 +230,8 @@ public class Templates {
 }
 ```
 
-Evidemment, la manière d'appeler les **templates** dans votre code sera légèrement différente selon l'organisation choisie, mais le principe reste le même : les méthodes statiques doivent correspondre aux noms des **templates**, et les données à injecter dans les **templates** sont passées en paramètres de ces méthodes.
+Quelle que soit l'organisation choisie, le principe reste le même :
+
+- les noms des **méthodes** doivent correspondre aux noms des **templates**
+- les **paramètres** définissent les données injectées
+- la vérification est effectuée au **build**, garantissant un code plus sûr et plus robuste

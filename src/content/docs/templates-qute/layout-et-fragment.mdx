@@ -9,16 +9,20 @@ import {Aside, TabItem, Tabs, LinkCard} from '@astrojs/starlight/components';
 import {Underline, HR} from '@components/index';
 
 
-Dans l'article précédent, nous avons vu comment créer des templates simples avec **Qute**. Cependant, à mesure que votre application grandit, il devient essentiel de structurer vos templates de manière efficace pour éviter la duplication de code et faciliter la maintenance. C'est là que les **sections** et les **fragments** entrent en jeu.
+Dans l'article précédent, nous avons vu comment créer des **templates** simples avec **Qute**. Cependant, à mesure que votre application évolue, il devient essentiel de structurer vos vues pour éviter la duplication de code et faciliter la maintenance.
+
+C'est là qu'interviennent les notions de **layout** et de **fragments**.
 
 
 ## Layout
 
-Dans une application, il arrive régulièrement que certaines parties de l'interface utilisateur soient communes à plusieurs pages, comme les en-têtes, les pieds de page ou les barres de navigation. Plutôt que de dupliquer ce code dans chaque template, vous pouvez définir ces parties communes comme des **templates** réutilisables.
+Dans une application, certaines parties de l'interface sont souvent communes à plusieurs pages : en-tête, pied de page, navigation, etc.
 
-Basiquement, il s'agit de créer des blocs de contenu dans un **template** qui peuvent être inclus dans d'autres **templates**. Cela permet de centraliser la gestion de ces éléments communs et de les modifier facilement à un seul endroit.
+Plutôt que de dupliquer ce code dans chaque **template**, il est préférable de le factoriser dans un **template** de base réutilisable.
 
-Pour commencer, vous pouvez créer un template de base, par exemple `base.html`, qui contient la structure générale de votre page, y compris les sections communes. Voici un exemple de ce à quoi pourrait ressembler ce **template** de base :
+En pratique, cela consiste à définir une structure commune, puis à y injecter du contenu spécifique à chaque page.
+
+Voici un exemple de template de base (`base.html`) :
 
 ```html title="base.html"
 <!DOCTYPE html>
@@ -41,12 +45,12 @@ Pour commencer, vous pouvez créer un template de base, par exemple `base.html`,
 </html>
 ```
 
-Dans ce **template**, le **header** et le **footer** sont des éléments qui peuvent être amenés à être réutilisés dans d'autres pages. L'objectif serait donc de les extraire dans des sections séparées pour pouvoir les inclure facilement dans d'autres **templates**.
+L'objectif est maintenant d'extraire certaines parties pour les rendre réutilisables.
 
 
 ### La commande `#include`
 
-Pour ce faire, vous pouvez créer des fichiers de **template** dédiés pour ces sections, par exemple `header.html` et `footer.html`, et y placer le code correspondant. Ensuite, dans votre **template** de base, vous pouvez inclure ces sections à l'aide de la syntaxe d'inclusion de **Qute**, `#include`. Par exemple, votre `base.html` pourrait ressembler à ceci après l'inclusion des sections :
+Vous pouvez isoler des blocs dans des fichiers dédiés, comme `header.html` et `footer.html`, puis les inclure dans vos **templates** grâce au mot clef `#include`.
 
 ```html {8,12} title="base.html"
 <!DOCTYPE html>
@@ -65,10 +69,14 @@ Pour ce faire, vous pouvez créer des fichiers de **template** dédiés pour ces
 </html>
 ```
 
+La section `#include` permet d'inclure un autre **template**, tout en conservant la possibilité de lui passer des paramètres si nécessaire.
+
 
 ### La commande `#insert`
 
-Très souvent, la partie centrale de votre page (le `main`) contiendra du contenu spécifique à chaque page. Vous pouvez y mettre un contenu par défaut entre les balises ou laisser un espace vide que les autres **templates** puissent y injecter leur propre contenu. Par exemple, vous pouvez définir une section dans votre **template** de base pour le contenu principal avec une syntaxe spéciale `#insert`, comme ceci :
+Pour rendre votre **layout** réellement réutilisable, vous devez pouvoir injecter du contenu spécifique dans certaines zones.
+
+C'est le rôle de `#insert`, qui agit comme un **slot** (emplacement dynamique).
 
 ```html {10,11} title="base.html"
 <!DOCTYPE html>
@@ -88,11 +96,17 @@ Très souvent, la partie centrale de votre page (le `main`) contiendra du conten
 </html>
 ```
 
-Dans cet exemple, nous avons défini deux sections d'insertion : une pour le titre de la page et une autre pour le contenu principal. Les autres **templates** qui incluent ce `base.html` comme squelette pourront alors injecter leur propre contenu dans ces sections d'insertion, ce qui permet de personnaliser chaque page tout en réutilisant la structure commune définie dans le template de base.
+Ici :
 
-Le `#insert` sans plus de précision correspond à la section d'insertion principale, tandis que le `#insert title` correspond à une section d'insertion spécifique pour le titre de la page. `title` est un nom arbitraire que nous avons choisi pour identifier cette section d'insertion, mais vous pouvez en créer autant que nécessaire avec des noms différents pour organiser votre contenu de manière plus structurée.
+- `#insert title` définit une zone nommée
+- `#insert` sans nom correspond au contenu principal
 
-Pour le template de la page d'accueil qui réutiliserait `base.html` par exemple, ça pourrait donner ceci :
+Chaque page peut ensuite injecter son propre contenu dans ces emplacements.
+
+
+#### Utilisation d'un layout
+
+Voici un exemple de **template** qui utilise `base.html` :
 
 ```html {3,5} title="home.html"
 {#include base}
@@ -103,9 +117,17 @@ Pour le template de la page d'accueil qui réutiliserait `base.html` par exemple
 {/}
 ```
 
-Dans ce **template**, nous incluons `base.html` et redéfinissons le contenu de la section `title` pour personnaliser le titre de la page d'accueil. Nous injectons également du contenu dans la section d'insertion principale pour afficher un paragraphe spécifique à cette page.
+Dans cet exemple :
 
-Vous pouvez également redéfinir le titre en passant par la mécanique des **expressions**, en utilisant des **variables** pour rendre le **template** plus dynamique. Par exemple, dans votre `base.html`, vous pouvez remplacer la section d'insertion du titre par une expression qui utilise une **variable**, comme ceci :
+- `{#title}` remplace la section `#insert title`
+- le contenu libre remplace la section principale
+
+
+#### Utilisation avec des variables
+
+Vous pouvez également utiliser des **variables** pour rendre votre **layout** plus dynamique.
+
+Par exemple, dans `base.html` :
 
 ```html {10} title="base.html"
 <!DOCTYPE html>
@@ -125,27 +147,37 @@ Vous pouvez également redéfinir le titre en passant par la mécanique des **ex
 </html>
 ```
 
-Ensuite, dans votre `home.html`, vous pouvez passer une valeur pour la **variable** `title` lors de l'inclusion du template de base, comme ceci :
+Puis dans votre **template** :
 
 ```html "title="Je remplace le titre"" title="home.html"
 {#include base title="Je remplace le titre" /}
     <p>Je suis un paragraphe perdu dans l'espace</p>
 {/}
 ```
-Le paragraphe, quant à lui, est injecté dans la section d'insertion principale du `base.html`, ce qui permet de personnaliser le contenu de la page d'accueil tout en réutilisant la structure commune définie dans le template de base.
+
+Ici, la **variable** `title` est transmise au **template** lors de l'inclusion.
+
+Cela permet de combiner :
+
+- structure réutilisable (layout)
+- données dynamiques (expressions)
+
+Cette approche permet de construire des interfaces propres, modulaires et faciles à maintenir, tout en conservant la simplicité du rendu côté serveur.
 
 
 <HR />
 
 ## Fragments
 
-Les **fragments** sont des morceaux de code contenu dans des **templates** qui peuvent être rendu séparément du reste du template. Cette mécanique est particulièrement utile pour les composants dynamiques basés sur de l'**Ajax**. Par exemple, vous pouvez avoir un template `astronaut.html` qui contient un fragment pour afficher les informations d'un astronaute.
+Les **fragments** sont des portions de code définies à l'intérieur d'un **template**, qui peuvent être rendues indépendamment du reste de la page.
 
-Ce fragment peut être rendu indépendamment du reste du **template**, ce qui permet de mettre à jour dynamiquement la liste des astronautes sans avoir à recharger toute la page.
+Ce mécanisme est particulièrement utile pour des interfaces dynamiques, notamment lorsqu'on utilise **HTMX** ou des **requêtes Ajax**.
+
+Par exemple, vous pouvez définir un **template** `astronaut.html` contenant un **fragment** représentant un élément de liste. Ce **fragment** pourra ensuite être renvoyé seul pour mettre à jour une partie de la page sans recharger l'ensemble.
 
 ### Déclaration d'un fragment
 
-Pour déclarer un **fragment** dans un **template**, vous pouvez utiliser la syntaxe `#fragment`, comme ceci :
+Un **fragment** se définit avec la section `#fragment` :
 
 ```html {3,5} title="astronaut.html"
 <ul id="astroList">
@@ -163,7 +195,7 @@ Le rendu du **template** `astronaut.html` affichera la liste des astronautes, ma
 ### Rendu d'un fragment
 
 <Tabs>
-    <TabItem label="Type-safety" icon="right-caret">
+    <TabItem label="Template type-safety" icon="right-caret">
 
     ```java title="AstronautResource.java"
     @Path("/")
@@ -192,12 +224,14 @@ Le rendu du **template** `astronaut.html` affichera la liste des astronautes, ma
     }
     ```
 
-    Pour rendre un **fragment** de manière **type-safety**, vous pouvez créer une méthode spécifique dans votre classe de ressource annotée avec `@CheckedTemplate` qui correspond au **fragment** que vous souhaitez rendre.
+    Avec l'approche type-safe, chaque **fragment** peut être exposé via une **méthode** dédiée.
 
-    Par exemple, dans l'exemple ci-dessus, nous avons créé une méthode `home$astroItem` qui correspond au **fragment** `astroItem` défini dans le **template** `home.html` en utilisant le symbole `$` pour indiquer qu'il s'agit d'un **fragment**. Cette méthode prend un objet `Astronaut` en paramètre et retourne une instance de `TemplateInstance` pour ce **fragment**. Ensuite, dans la méthode `addAstronaut`, nous appelons cette méthode pour rendre le **fragment** avec les données de l'astronaute nouvellement ajouté.
+    La convention est la suivante : `template$fragment`
+
+    Ici, `astronaut$astroItem` correspond au **fragment** `astroItem` du **template** `astronaut.html`.
 
     </TabItem>
-    <TabItem label="Non type-safety" icon="right-caret">
+    <TabItem label="Template classique" icon="right-caret">
 
     ```java title="AstronautResource.java"
     @Path("/")
@@ -226,19 +260,16 @@ Le rendu du **template** `astronaut.html` affichera la liste des astronautes, ma
     }
     ```
 
-    Pour rendre un **fragment** de manière non **type-safety**, vous pouvez utiliser la méthode `getFragment` de l'instance de `Template` pour récupérer le **fragment** que vous souhaitez rendre, puis passer les données nécessaires à ce **fragment** en utilisant la méthode `data`.
-
-    Dans l'exemple ci-dessus, nous avons utilisé `home.getFragment("astroItem")` pour récupérer le **fragment** `astroItem` défini dans le **template** `home.html`, puis nous avons passé l'objet `Astronaut` en utilisant la méthode `data` pour rendre ce **fragment** avec les données de l'astronaute nouvellement ajouté.
+    Sans type-safety, vous pouvez utiliser `getFragment("astroItem")` pour récupérer le **fragment**, puis lui injecter ses données via `data()`.
 
     </TabItem>
 </Tabs>
 
 
-### Utilisation avec HTMX
+### Intégration avec HTMX
 
-Afin de rendre le tout vraiment dynamique, il vous reste à créer un formulaire dans votre **template** `astronaut.html` pour permettre l'ajout d'un nouvel astronaute, et à utiliser du **JavaScript** pour envoyer une requête **Ajax** à votre endpoint `add` lorsque le formulaire est soumis, afin de mettre à jour la liste des astronautes sans recharger la page entière. Plus simplement, vous pouvez utiliser du **HTMX** pour gérer cette interaction de manière plus fluide et sans avoir à écrire du code **JavaScript** personnalisé.
+Pour rendre l'interface réellement dynamique, vous pouvez utiliser **HTMX** afin de charger des **fragments** à la volée.
 
-Par exemple :
 
 ```html title="astronaut.html"
 <ul id="astroList">
@@ -255,45 +286,41 @@ Par exemple :
 </form>
 ```
 
-Dans ce formulaire, nous utilisons les attributs `hx-post`, `hx-target` et `hx-swap` de **HTMX** pour envoyer une requête **POST** à l'endpoint `/add` lorsque le formulaire est soumis, et pour insérer le nouveau **fragment** rendu à la fin (`beforeend`) de la liste des astronautes (`#astroList`) sans recharger la page entière.
+Ici :
 
+- `hx-post` envoie une requête POST
+- `hx-target` cible la liste
+- `hx-swap="beforeend"` ajoute le fragment à la fin
 
-<Aside type="note">
-    Nous reviendrons plus en détail sur l'utilisation de **HTMX** dans un prochain article, mais n'hésitez pas à consulter la documentation officielle de **HTMX** pour en savoir plus sur les différentes fonctionnalités qu'elle offre pour rendre vos applications web plus dynamiques et interactives.
-</Aside>
+Le serveur renvoie uniquement le **fragment HTML**, qui est inséré directement dans la page.
+
+<hr />
 
 <LinkCard
     title="Documentation officielle de HTMX"
     href="https://htmx.org/"
-    description="Pour en savoir plus immédiatement sur HTMX et ses fonctionnalités."
+    description="Pour en savoir plus sur HTMX et ses fonctionnalités."
 />
 
 <HR />
 
 ## Template ou Fragment ?
 
-Pour distinguer clairement quand utiliser un **template** ou un **fragment**, il est important de comprendre que les **templates** définissent généralement une vue ou un composant autonome (page, layout, ou partial réutilisable).
+Un **template** représente généralement une vue complète ou un composant réutilisable.
 
-Les **fragments**, eux, représentent une <Underline>portion d'un template existant</Underline> que l'on souhaite pouvoir rendre séparément. Ils sont utiles lorsqu'une partie d'une page doit parfois être renvoyée seule (par exemple pour une mise à jour partielle avec HTMX) sans créer un nouveau fichier de template.
+Un **fragment**, lui, correspond à une portion d'un **template** que l'on souhaite pouvoir rendre indépendamment.
 
-Si une section de votre interface est <Underline>réutilisée dans plusieurs pages</Underline> ou possède une <Underline>identité claire de composant</Underline>, il est généralement préférable de la définir dans un **template séparé** (souvent appelé partial). Cela améliore la lisibilité et la réutilisabilité.
+En résumé :
 
-En revanche, si vous avez une <Underline>sous-partie d'une page spécifique</Underline> qui doit parfois être rendue indépendamment du reste du template, il peut être plus approprié de la définir comme un **fragment** à l'intérieur du template existant.
-
-Voici un tableau récapitulatif pour vous aider à choisir entre un **template** et un **fragment** :
+- utilisez un **template** pour structurer votre application
+- utilisez un **fragment** pour découper dynamiquement une page existante
 
 
 | Situation | Template séparé | Fragment dans le template | Pourquoi |
 |---|---|---|---|
-| Bloc réutilisé dans plusieurs pages | ✅ Oui | ❌ Non | Un composant partagé doit avoir son propre fichier |
-| Bloc spécifique à une seule page | ❌ Pas nécessaire | ✅ Oui | Pas besoin de créer un fichier juste pour ça |
-| Bloc rendu seul depuis Java (endpoint dédié) | ✅ Très bien | ✅ Possible | Les deux fonctionnent |
-| Gros bloc HTML complexe | ✅ Oui | ❌ Éviter | Lisibilité et maintenance |
-| Mise à jour partielle HTMX | ✅ Très bien | ✅ Très bien | Les deux marchent |
-| Bloc utilisé uniquement dans une page mais rerendu souvent | ⚖️ Au choix | ⚖️ Au choix | Question de lisibilité |
-| Besoin de séparer clairement la structure de page | ✅ Oui | ❌ Non | Meilleure organisation |
-
-
-<Aside type="tip">
-    Un fragment n’est pas un composant réutilisable par défaut : c’est avant tout un point de découpage dans un template existant.
-</Aside>
+| Bloc réutilisé dans plusieurs pages | ✅ Oui | ❌ Non | Composant partagé |
+| Bloc spécifique à une seule page | ❌ Non | ✅ Oui | Évite un fichier inutile |
+| Bloc rendu seul depuis Java (endpoint dédié) | ✅ Oui | ✅ Oui | Deux approches possibles |
+| Gros bloc HTML complexe | ✅ Oui | ❌ Non | Meilleure lisibilité |
+| Mise à jour partielle (HTMX) | ✅ Oui | ✅ Oui | Les deux fonctionnent |
+| Structure globale de page | ✅ Oui | ❌ Non | Meilleure organisation |

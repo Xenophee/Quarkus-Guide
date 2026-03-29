@@ -9,21 +9,26 @@ import {Aside, Card, TabItem, Tabs} from '@astrojs/starlight/components';
 import {Underline, HR} from '@components/index';
 
 
-Pour construire des interfaces utilisateurs, plusieurs options sont possible aujourd'hui. La solution la plus répandue est d'utiliser un framework **JavaScript** côté client (*React*, *Vue*, *Angular*, etc.) pour construire une application web moderne qui demande beaucoup d'intéractivité et de gestion d'état côté front.
+Pour construire des interfaces utilisateur aujourd'hui, plusieurs approches sont possibles. La plus répandue consiste à utiliser un framework **JavaScript** côté client (React, Vue, Angular, etc.) afin de développer des applications web riches, fortement interactives et reposant sur une gestion d'état côté front-end.
 
-Cependant, il existe des cas où une approche plus traditionnelle basée sur des **templates** côté serveur peut être plus appropriée, notamment pour des applications simples ou lorsque les performances sont une préoccupation majeure.
+Cependant, cette approche n'est pas toujours la plus adaptée. Pour des applications plus simples, orientées contenu, ou lorsque les performances et la simplicité de mise en œuvre sont des critères importants, une approche basée sur des **templates** côté serveur peut s’avérer plus pertinente.
 
-Pour ce faire, la plupart des frameworks proposent un moteur de **template** qui permet de générer du HTML côté serveur en utilisant des données dynamiques. **Quarkus** ne fait pas exception et propose une intégration avec le moteur **Qute**.
+Dans ce modèle, le serveur génère directement le **HTML** à partir de données dynamiques, ce qui réduit considérablement la complexité côté client.
+
+C’est là qu'intervient **Quarkus** avec son moteur de templates **Qute**. Contrairement aux moteurs traditionnels, **Qute** est conçu pour être **type-safe** et optimisé pour un traitement à la compilation (build-time), ce qui permet de détecter certaines erreurs dès le développement et d’améliorer les performances.
 
 
 ## Installation
 
-Pour commencer avec les templates web de **Quarkus**, il faut ajouter les dépendances nécessaires à votre projet selon votre gestionnaire de dépendances. Il existe deux façon possible d'utiliser **Qute** dans votre projet : soit en utilisant `qute-web` qui va exposer directement les templates via HTTP, soit en utilisant `rest-qute` qui va vous permettre de rendre des templates depuis vos endpoints REST.
+Pour utiliser les templates avec **Quarkus**, vous devez ajouter les dépendances nécessaires à votre projet, en fonction de votre gestionnaire de dépendances.
+
+Il existe deux façons principales d'intégrer **Qute** :
+
+- `qute-web` : permet d’exposer directement des templates via HTTP en suivant une approche basée sur la convention, avec un minimum de code **Java**.
+- `rest-qute` : permet de générer des templates depuis vos **endpoints REST**, offrant davantage de contrôle et une meilleure intégration avec votre logique métier.
 
 <Aside type="tip">
-    `qute-web` est idéal pour les applications simples ou lorsque vous souhaitez exposer rapidement des **templates** sans avoir à écrire du code **Java**. En revanche, si vous avez besoin de plus de contrôle sur la logique métier ou si vous souhaitez intégrer des fonctionnalités plus complexes dans vos **templates**, `rest-qute` est la meilleure option.
-
-    De plus, `rest-qute` vous permet de rendre des templates à partir de n'importe quel **endpoint REST**, ce qui offre une grande flexibilité pour construire des applications web plus complexes. De manière générale, `rest-qute` est recommandé pour la plupart des cas d'utilisation.
+    `rest-qute` est généralement recommandé pour les applications réelles, car il permet de contrôler précisément le rendu des **templates** et de les intégrer facilement dans une **architecture REST**. Cette approche offre une plus grande flexibilité et s'adapte mieux aux applications évolutives.
 </Aside>
 
 <Card title="Dépendances Quarkus" icon="setting">
@@ -70,11 +75,10 @@ Pour commencer avec les templates web de **Quarkus**, il faut ajouter les dépen
     </TabItem>
 
     <Aside type="note">
-        `quarkiverse` est une collection d'extensions communautaires pour **Quarkus**. Ces extensions sont développées et maintenues par la communauté, offrant ainsi une grande variété de fonctionnalités supplémentaires pour enrichir votre application **Quarkus**.
-
-        Ces extensions font partie intégrante de l'écosystème **Quarkus** et figurent dans son **BOM** (Bill of Materials), ce qui garantit leur compatibilité avec les différentes versions du framework.
+        **Quarkiverse** est une collection d'extensions communautaires pour **Quarkus**. Elles sont maintenues par la communauté et permettent d'enrichir l'écosystème avec de nombreuses fonctionnalités supplémentaires. Ces extensions sont généralement compatibles avec les versions de **Quarkus** grâce à leur intégration dans le **BOM** (*Bill of Materials*).
     </Aside>
   </Tabs>
+
 </Card>
 
 
@@ -82,11 +86,27 @@ Pour commencer avec les templates web de **Quarkus**, il faut ajouter les dépen
 
 ## Configuration des assets front
 
-Par défaut, **Quarkus** sert les fichiers statiques (CSS, JavaScript, images, etc.) à partir du répertoire `src/main/resources/META-INF/resources`. Vous pouvez organiser vos assets à partir de là pour les rendre accessibles depuis votre application.
+Par défaut, **Quarkus** sert les fichiers statiques (*CSS*, *JavaScript*, *images*, etc.) depuis le répertoire `src/main/resources/META-INF/resources`. Ce dossier est <Underline>exposé comme la racine web de votre application</Underline>.
 
-Par exemple, vous pouvez créer un sous-répertoire `css` pour vos fichiers CSS et un sous-répertoire `js` pour vos fichiers JavaScript. Par exemple, si vous avez un fichier `style.css` dans `src/main/resources/META-INF/resources/css`, il sera accessible via l'URL `/css/style.css` dans votre application.
+Vous pouvez donc y organiser vos assets librement. Par exemple :
 
-Pour optimiser vos build et vous passez de **Node.js**, vous pouvez recourir à une extension de **Quarkiverse** nommé `quarkus-web-bundler`. L'usage de ce dernier implique de positionner vos assets dans un dossier `web` au niveau de `src/main/resources/`, ce qui permettra à l'extension de les traiter et de les servir de manière optimisée.
+- `css/style.css` → accessible via `/css/style.css`
+- `js/app.js` → accessible via `/js/app.js`
+
+Cela permet de servir rapidement des ressources statiques sans configuration supplémentaire.
+
+Cependant, cette approche reste assez basique et ne propose pas d'optimisation avancée des assets (minification, bundling, gestion du cache, etc.). Dans ce cas, il est courant d'utiliser des outils comme **Node.js** et des **bundlers** (*Vite*, *Webpack*, etc.).
+
+Pour éviter cette dépendance, vous pouvez utiliser l'extension **Quarkiverse** `quarkus-web-bundler`.
+
+Cette extension permet de :
+
+- regrouper (bundle) vos fichiers CSS et JavaScript
+- minifier les ressources
+- générer des fichiers versionnés (cache busting)
+- effectuer ces optimisations au moment du build
+
+Pour l'utiliser, vous devez placer vos assets dans le répertoire `src/main/resources/web`. L'extension se chargera alors de les traiter automatiquement.
 
 
 <Card title="Dépendances Quarkus" icon="setting">
@@ -125,7 +145,7 @@ Pour optimiser vos build et vous passez de **Node.js**, vous pouvez recourir à 
 
 </Card>
 
-Avec cette dépendance, vous n'avez plus qu'à indiquer le mot clef `bundle` dans le `head` de votre **template** pour que les **assets** soient automatiquement regroupés et optimisés lors du build de votre application, comme ceci :
+Une fois configurée, l'intégration avec **Qute** est très simple. Il suffit d’utiliser la directive `{#bundle /}` dans le `<head>` de votre **template** :
 
 ```html {4} title="index.html"
 <head>
@@ -134,3 +154,11 @@ Avec cette dépendance, vous n'avez plus qu'à indiquer le mot clef `bundle` dan
     {#bundle /}
 </head>
 ```
+
+Cette directive est interprétée par **Qute** et injecte automatiquement les liens vers les **assets** optimisés générés lors du **build**.
+
+Vous n'avez donc plus besoin de référencer manuellement vos fichiers CSS et JavaScript.
+
+<Aside type="note">
+    L'extension `quarkus-web-bundler` est compatible avec des outils comme **Tailwind CSS** ou **Sass**, ce qui vous permet d'intégrer des workflows de styling plus avancés sans dépendre d’un environnement **Node.js** complet.
+</Aside>

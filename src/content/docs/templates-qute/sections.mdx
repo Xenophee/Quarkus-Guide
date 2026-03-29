@@ -1,6 +1,6 @@
 ---
-title: Structures de contrôle
-description: Découvrez les différentes structures de contrôle disponibles dans Qute pour gérer la logique de vos templates, y compris les conditions, les boucles et les itérations.
+title: Sections et expressions
+description: Découvrez comment utiliser les différentes structures de contrôle et expressions disponibles dans Qute pour gérer la logique de vos templates.
 sidebar:
     order: 7
 ---
@@ -9,15 +9,17 @@ import {Aside, Card, TabItem, Tabs} from '@astrojs/starlight/components';
 import {Underline, HR} from '@components/index';
 
 
-Dans cette section, nous allons explorer les différentes structures de contrôle disponibles dans **Qute** pour gérer la logique de vos templates. Ces structures vous permettent d'ajouter des conditions, des boucles et des itérations à vos templates, ce qui est essentiel pour créer des interfaces utilisateur dynamiques et interactives.
+Dans cet article, nous allons explorer les différentes structures de contrôle disponibles dans **Qute** pour gérer la logique de vos **templates**.
+
+Ces structures permettent d'ajouter des conditions, des boucles et des itérations, et sont essentielles pour construire des interfaces dynamiques.
 
 ## Conditions
 
-Les conditions sont utilisées pour afficher ou masquer du contenu en fonction de certaines conditions.
+Les **conditions** permettent d'afficher ou masquer du contenu en fonction de certaines valeurs.
 
 ### Définition de conditions
 
-En **Qute**, vous pouvez utiliser la syntaxe suivante pour créer des conditions :
+En **Qute**, vous pouvez utiliser la section `#if` :
 
 ```html
 {#if condition}
@@ -25,7 +27,7 @@ En **Qute**, vous pouvez utiliser la syntaxe suivante pour créer des conditions
 {/if}
 ```
 
-Vous pouvez également ajouter une clause `else` pour gérer le cas où la condition est fausse :
+Vous pouvez ajouter une clause alternative avec `#else` :
 
 ```html
 {#if condition}
@@ -35,7 +37,7 @@ Vous pouvez également ajouter une clause `else` pour gérer le cas où la condi
 {/if}
 ```
 
-Vous pouvez également utiliser des conditions imbriquées pour gérer des scénarios plus complexes :
+Et gérer plusieurs cas avec `#else if` :
 
 ```html
 {#if condition1}
@@ -47,29 +49,68 @@ Vous pouvez également utiliser des conditions imbriquées pour gérer des scén
 {/if}
 ```
 
-Il est possible de faire des conditions avec les opérateurs suivants :
+Il est possible de faire des **conditions** avec les opérateurs suivants :
 
-| Opérateur | Description |
-|-----------|-------------|
-| `==` | Égal à |
-| `!=` | Différent de |
-| `>` | Supérieur à |
-| `<` | Inférieur à |
-| `>=` | Supérieur ou égal à |
-| `<=` | Inférieur ou égal à |
-| `&&` | ET logique |
-| `||` | OU logique |
-| `!` | NON logique |
+
+<table aria-label="Opérateurs Qute">
+    <thead>
+    <tr>
+        <th>Opérateur</th>
+        <th>Description</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+        <td><code>==</code></td>
+        <td>Égal à</td>
+    </tr>
+    <tr>
+        <td><code>!=</code></td>
+        <td>Différent de</td>
+    </tr>
+    <tr>
+        <td><code>></code></td>
+        <td>Supérieur à</td>
+    </tr>
+    <tr>
+        <td><code>`<`</code></td>
+        <td>Inférieur à</td>
+    </tr>
+    <tr>
+        <td><code>>=</code></td>
+        <td>Supérieur ou égal à</td>
+    </tr>
+    <tr>
+        <td><code>`<=`</code></td>
+        <td>Inférieur ou égal à</td>
+    </tr>
+    <tr>
+        <td><code>&&</code></td>
+        <td>ET logique</td>
+    </tr>
+    <tr>
+        <td><code>||</code></td>
+        <td>OU logique</td>
+    </tr>
+    <tr>
+        <td><code>!</code></td>
+        <td>NON logique</td>
+    </tr>
+    </tbody>
+</table>
+
 
 
 <Aside type="caution">
-    Les opérateurs `>`, `<`, `>=` et `<=` ne sont pas supportés pour les valeurs `null`.
+    Les opérateurs `>`, `<`, `>=` et `<=` peuvent provoquer des erreurs pour les valeurs `null`.
 </Aside>
 
 
 ### Utiliser `when` ou `switch` pour les conditions multiples
 
 Lorsque vous avez plusieurs conditions à évaluer, il peut être plus pratique d'utiliser la syntaxe `when` ou `switch` pour rendre votre code plus lisible. Voici comment vous pouvez utiliser ces structures en **Qute** :
+
+Lorsque vous devez comparer une valeur à plusieurs cas possibles, vous pouvez utiliser la section `#when` ou `#switch`.
 
 ```html
 {#when name}
@@ -90,21 +131,22 @@ Les opérateurs supportés pour les conditions `when` sont les suivants :
 | `!=` ou `not` | Différent de | `{#is not "Ripley"}` ou `{#case != "Ripley"}` |
 | `>` | Supérieur à | `{#is > 10}` |
 | `<` | Inférieur à | `{#is < 10}` |
-| `>=` | Supérieur ou égal à | `{#is >= 10}` | |
-| `<=` | Inférieur ou égal à | `{#is <= 10}` | |
+| `>=` | Supérieur ou égal à | `{#is >= 10}` |
+| `<=` | Inférieur ou égal à | `{#is <= 10}` |
 | `in` | Appartient à une collection | `{#is in 'Ripley' 'Dallas'}` |
 | `!in` | N'appartient pas à une collection | `{#is !in 'Ripley' 'Dallas'}` |
 
+La section `#when` permet de simplifier la lecture lorsque plusieurs **conditions** portent sur une même **variable**, tout en rendant le **template** plus lisible et structuré.
 
 <HR />
 
 ## Boucles et itérations
 
-Les **boucles** sont utilisées pour itérer sur des **collections de données** et afficher du contenu pour chaque élément de la **collection**.
+Les **boucles** permettent d'itérer sur une **collection** de données et de générer du contenu pour chaque élément.
 
 ### Définition de boucles
 
-En **Qute**, vous pouvez utiliser la syntaxe `each` suivante pour créer une **boucle** :
+En **Qute**, vous pouvez utiliser la section `#each` :
 
 ```html
 {#each collection}
@@ -112,7 +154,7 @@ En **Qute**, vous pouvez utiliser la syntaxe `each` suivante pour créer une **b
 {/each}
 ```
 
-Vous pouvez aussi utiliser la syntaxe `for` pour itérer sur une **collection** et ainsi fournir un alias personnalisé (ici, `item`) pour chaque élément de la **collection** :
+Ou bien utiliser `#for`, qui permet de définir un alias explicite :
 
 ```html
 {#for item in collection}
@@ -120,7 +162,9 @@ Vous pouvez aussi utiliser la syntaxe `for` pour itérer sur une **collection** 
 {/for}
 ```
 
-Lorsque vous n'avez aucun contenu à afficher pour une **collection** vide, vous pouvez utiliser la clause `else` pour gérer ce cas directement dans la boucle :
+### Gérer les collections vides avec `else`
+
+Lorsque vous n'avez aucun contenu à afficher pour une **collection** vide, vous pouvez utiliser la clause `else` pour gérer ce cas directement dans la **boucle** :
 
 ```html
 {#for item in collection}
@@ -135,9 +179,11 @@ Lorsque vous n'avez aucun contenu à afficher pour une **collection** vide, vous
 </Aside>
 
 
-### Expressions de boucle
+### Variables de boucle
 
-**Qute** prend en charge plusieurs types d'**expressions de boucle** pour vous permettre de personnaliser la façon dont vous itérez sur vos données. Pour ce faire, vous devez utiliser l'élément de base sur lequel vous itérez, vous lui ajoutez un underscore `_`, puis le mot clef de **Qute**. Voici quelques exemples d'expressions de boucle que vous pouvez utiliser :
+**Qute** fournit plusieurs **variables** utiles pour chaque itération.
+
+Elles s'utilisent en suffixant l'alias avec `_` :
 
 | Expression de boucle | Description |
 |---------------------|-------------|
@@ -151,14 +197,18 @@ Lorsque vous n'avez aucun contenu à afficher pour une **collection** vide, vous
 | `_indexParity` | Retourne "*even*" si l'index de l'itération en cours est pair, sinon "*odd*". |
 
 
-Exemple concret d'utilisation de ces expressions de boucle :
+Exemple d'utilisation :
 
 ```html
 {#for item in collection}
-    <p>Item {item_count}: {item.name}</p>
+    <p class="{item_indexParity}">
+        #{item_count} - {item.name}
+    </p>
+
     {#if item_isFirst}
         <p>Ceci est le premier élément de la collection.</p>
     {/if}
+
     {#if item_isLast}
         <p>Ceci est le dernier élément de la collection.</p>
     {/if}
@@ -169,7 +219,7 @@ Dans le cadre d'un `each`, vous pouvez utiliser le même concept en vous référ
 
 ```html
 {#each collection}
-    <p>Item {it_count}: {it.name}</p>
+    <p>#{it_count}: {it.name}</p>
     {#if it_isFirst}
         <p>Ceci est le premier élément de la collection.</p>
     {/if}
@@ -180,34 +230,123 @@ Dans le cadre d'un `each`, vous pouvez utiliser le même concept en vous référ
 ```
 
 <Aside type="tip">
-    Les **expressions de boucle** sont très utiles pour ajouter des fonctionnalités supplémentaires à vos boucles, comme l'affichage d'un message spécial pour le premier ou le dernier élément de la collection, ou pour appliquer des styles différents en fonction de la parité de l'index.
+    Les **variables de boucle** sont très utiles pour ajouter des fonctionnalités supplémentaires à vos boucles, comme l'affichage d'un message spécial pour le premier ou le dernier élément de la collection, ou pour appliquer des styles différents en fonction de la parité de l'index.
 </Aside>
 
 <HR />
 
 ## Définir des variables locales
 
-Dans **Qute**, vous pouvez définir des variables locales à l'intérieur de vos templates pour stocker des valeurs temporaires ou pour simplifier l'accès à des données complexes. Pour ce faire, vous pouvez utiliser la syntaxe `let` ou `set` comme suit :
+Dans **Qute**, vous pouvez définir des **variables** locales afin de stocker des valeurs temporaires ou simplifier l'accès à des données complexes.
+
+### Définition de variables locales
+
+Pour déclarer une **variable**, vous pouvez utiliser la syntaxe `let` ou `set` comme suit :
 
 ```html
 {#let alien = "E.T"}
-    <!-- Contenu du template où la variable est accessible -->
+    <p>Alien : {alien}</p>
 {/let}
 ```
 
-Dans cet exemple, nous avons défini une variable locale `alien` avec la valeur `"E.T"`. Cette variable est accessible uniquement à l'intérieur du bloc `let`, ce qui vous permet de l'utiliser pour simplifier votre template ou pour stocker des valeurs intermédiaires.
+La **variable** `alien` est accessible uniquement à l'intérieur du bloc.
 
-<Aside type="tip">
-    L'utilisation de variables locales peut améliorer la lisibilité de votre template en évitant les expressions complexes et en rendant votre code plus facile à comprendre. De plus, cela vous permet de réutiliser des valeurs calculées ou des données extraites sans avoir à les recalculer à chaque fois.
-</Aside>
+Cela permet de :
 
-Il est possible également de définir une valeur par défaut pour une variable locale en utilisant la syntaxe suivante :
+- simplifier des expressions complexes
+- éviter les répétitions
+- améliorer la lisibilité du template
+
+
+### Valeurs par défaut pour les variables locales
+
+Vous pouvez définir une valeur uniquement si la **variable** n'existe pas déjà :
 
 ```html "?="
 {#let alien ?= "E.T"}
-    <!-- Contenu du template où la variable est accessible -->
+    <p>{alien}</p>
 {/let}
 ```
 
-Dans cet exemple, la variable `alien` sera initialisée avec la valeur `"E.T"` uniquement si elle n'a pas déjà été définie auparavant. Si `alien` a déjà une valeur, cette valeur sera conservée et ne sera pas écrasée par la valeur par défaut.
+Ici, `alien` sera initialisée uniquement si elle est absente ou `null`.
 
+
+### Simplifier l'accès à des données complexes
+
+Vous pouvez également utiliser des **variables locales** pour simplifier l'accès à des données complexes, comme des propriétés d'objets ou des résultats de fonctions et c'est d'ailleurs tout l'intérêt de cette fonctionnalité. Pour ce faire, vous avez deux options soit que vous êtes dans le cadre d'un **template type safety**, soit que vous êtes dans un **template classique**.
+
+<Tabs>
+    <TabItem label="Template type-safety" icon="right-caret">
+
+        ```html
+        {#let captain = ship.captain}
+            <p>Le capitaine du vaisseau est {captain.name}.</p>
+            <p>Il a {captain.experience} années d'expérience.</p>
+        {/let}
+        ```
+
+        Cela évite de répéter `ship.captain` et rend le template plus lisible.
+
+    </TabItem>
+    <TabItem label="Template classique" icon="right-caret">
+
+        ```html
+        {#with ship.captain}
+            <p>Le capitaine du vaisseau est {name}.</p>
+            <p>Il a {experience} années d'expérience.</p>
+        {/with}
+        ```
+
+        Ici, `ship.captain` devient le contexte courant (`this`).
+
+    <Aside type="note">
+        `this` masque le type réel manipulé, ce qui empêche **Qute** de valider les propriétés utilisées au build. Vous perdez donc les bénéfices du **type-safety** si vous utilisez cette syntaxe avec l'autre mode de template.
+    </Aside>
+
+    </TabItem>
+</Tabs>
+
+### Utiliser des variables pour des calculs
+
+Vous pouvez également stocker des résultats de fonctions :
+
+    <Tabs>
+    <TabItem label="Template type-safety" icon="right-caret">
+
+        ```html
+        {#let totalAliens = ship.getTotalAliens()}
+            {#if totalAliens > 0}
+                <p>Il y a {totalAliens} aliens à bord du vaisseau.</p>
+            {#else}
+                <p>Il n'y a aucun alien à bord du vaisseau.</p>
+            {/if}
+        {/let}
+        ```
+
+    </TabItem>
+    <TabItem label="Template classique" icon="right-caret">
+
+        Avec la syntaxe `with`, vous pouvez faire la même chose de manière plus concise en faisant référence au résultat de la fonction directement grâce au mot clef `this` :
+
+        ```html
+        {#with ship.getTotalAliens()}
+            {#if this > 0}
+                <p>Il y a {this} aliens à bord du vaisseau.</p>
+            {#else}
+                <p>Il n'y a aucun alien à bord du vaisseau.</p>
+            {/if}
+        {/with}
+        ```
+
+    </TabItem>
+</Tabs>
+
+<Aside type="tip">
+    Bonnes pratiques à retenir :
+    - privilégier `#let` dans un contexte **type-safe**
+    - éviter `#with` si vous utilisez `@CheckedTemplate`
+    - choisir des noms explicites pour vos **variables**
+    - limiter la complexité dans les **templates**
+
+    Les **variables locales** sont un outil simple mais puissant pour écrire des templates plus clairs, plus maintenables et plus robustes.
+</Aside>
