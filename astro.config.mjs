@@ -52,7 +52,7 @@ export default defineConfig({
 				},*/
                 {
                     label: 'Interface Web Qute',
-                    autogenerate: { directory: 'templates-qute' },
+                    autogenerate: { directory: 'templates-qute' }, badge: { text: 'Nouveau' },
                 },
 				{
 					label: 'Panache ORM',
