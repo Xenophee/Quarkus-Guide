@@ -1,0 +1,164 @@
+---
+title: Introduction
+description: Introduction aux templates web de Quarkus.
+sidebar:
+    order: 1
+---
+
+import {Aside, Card, TabItem, Tabs} from '@astrojs/starlight/components';
+import {Underline, HR} from '@components/index';
+
+
+Pour construire des interfaces utilisateur aujourd'hui, plusieurs approches sont possibles. La plus répandue consiste à utiliser un framework **JavaScript** côté client (React, Vue, Angular, etc.) afin de développer des applications web riches, fortement interactives et reposant sur une gestion d'état côté front-end.
+
+Cependant, cette approche n'est pas toujours la plus adaptée. Pour des applications plus simples, orientées contenu, ou lorsque les performances et la simplicité de mise en œuvre sont des critères importants, une approche basée sur des **templates** côté serveur peut s’avérer plus pertinente.
+
+Dans ce modèle, le serveur génère directement le **HTML** à partir de données dynamiques, ce qui réduit considérablement la complexité côté client.
+
+C’est là qu'intervient **Quarkus** avec son moteur de templates **Qute**. Contrairement aux moteurs traditionnels, **Qute** est conçu pour être **type-safe** et optimisé pour un traitement à la compilation (build-time), ce qui permet de détecter certaines erreurs dès le développement et d’améliorer les performances.
+
+
+## Installation
+
+Pour utiliser les templates avec **Quarkus**, vous devez ajouter les dépendances nécessaires à votre projet, en fonction de votre gestionnaire de dépendances.
+
+Il existe deux façons principales d'intégrer **Qute** :
+
+- `qute-web` : permet d’exposer directement des templates via HTTP en suivant une approche basée sur la convention, avec un minimum de code **Java**.
+- `rest-qute` : permet de générer des templates depuis vos **endpoints REST**, offrant davantage de contrôle et une meilleure intégration avec votre logique métier.
+
+<Aside type="tip">
+    `rest-qute` est généralement recommandé pour les applications réelles, car il permet de contrôler précisément le rendu des **templates** et de les intégrer facilement dans une **architecture REST**. Cette approche offre une plus grande flexibilité et s'adapte mieux aux applications évolutives.
+</Aside>
+
+<Card title="Dépendances Quarkus" icon="setting">
+  <Tabs>
+    <TabItem label="Maven" icon="seti:maven">
+
+    Si vous utilisez **Maven** comme gestionnaire de dépendances, voici les dépendances à ajouter dans votre fichier `pom.xml` :
+
+        Pour l'utilisation de `qute-web` :
+
+        ```xml
+        <dependency>
+            <groupId>io.quarkiverse.qute.web</groupId>
+            <artifactId>quarkus-qute-web</artifactId>
+        </dependency>
+        ```
+
+        Pour l'utilisation de `rest-qute` :
+
+        ```xml
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-qute</artifactId>
+        </dependency>
+        ```
+
+    </TabItem>
+    <TabItem label="Gradle" icon="seti:gradle">
+
+    Si vous utilisez **Gradle**, ajoutez la dépendance suivante dans votre fichier `build.gradle.kts` :
+
+        Pour l'utilisation de `qute-web` :
+
+        ```kotlin
+        implementation("io.quarkiverse.qute.web:quarkus-qute-web")
+        ```
+
+        Pour l'utilisation de `rest-qute` :
+
+        ```kotlin
+        implementation("io.quarkus:quarkus-rest-qute")
+        ```
+
+    </TabItem>
+
+    <Aside type="note">
+        **Quarkiverse** est une collection d'extensions communautaires pour **Quarkus**. Elles sont maintenues par la communauté et permettent d'enrichir l'écosystème avec de nombreuses fonctionnalités supplémentaires. Ces extensions sont généralement compatibles avec les versions de **Quarkus** grâce à leur intégration dans le **BOM** (*Bill of Materials*).
+    </Aside>
+  </Tabs>
+
+</Card>
+
+
+<HR />
+
+## Configuration des assets front
+
+Par défaut, **Quarkus** sert les fichiers statiques (*CSS*, *JavaScript*, *images*, etc.) depuis le répertoire `src/main/resources/META-INF/resources`. Ce dossier est <Underline>exposé comme la racine web de votre application</Underline>.
+
+Vous pouvez donc y organiser vos assets librement. Par exemple :
+
+- `css/style.css` → accessible via `/css/style.css`
+- `js/app.js` → accessible via `/js/app.js`
+
+Cela permet de servir rapidement des ressources statiques sans configuration supplémentaire.
+
+Cependant, cette approche reste assez basique et ne propose pas d'optimisation avancée des assets (minification, bundling, gestion du cache, etc.). Dans ce cas, il est courant d'utiliser des outils comme **Node.js** et des **bundlers** (*Vite*, *Webpack*, etc.).
+
+Pour éviter cette dépendance, vous pouvez utiliser l'extension **Quarkiverse** `quarkus-web-bundler`.
+
+Cette extension permet de :
+
+- regrouper (bundle) vos fichiers CSS et JavaScript
+- minifier les ressources
+- générer des fichiers versionnés (cache busting)
+- effectuer ces optimisations au moment du build
+
+Pour l'utiliser, vous devez placer vos assets dans le répertoire `src/main/resources/web`. L'extension se chargera alors de les traiter automatiquement.
+
+
+<Card title="Dépendances Quarkus" icon="setting">
+  <Tabs>
+    <TabItem label="Maven" icon="seti:maven">
+
+    Si vous utilisez **Maven** comme gestionnaire de dépendances, voici la dépendance à ajouter dans votre fichier `pom.xml` pour l'utilisation de `quarkus-web-bundler` :
+
+        ```xml
+        <dependency>
+            <groupId>io.quarkiverse.web-bundler</groupId>
+            <artifactId>quarkus-web-bundler</artifactId>
+            <version>2.2.1</version>
+        </dependency>
+        ```
+
+    </TabItem>
+    <TabItem label="Gradle" icon="seti:gradle">
+
+    Si vous utilisez **Gradle**, ajoutez la dépendance suivante dans votre fichier `build.gradle.kts` pour l'utilisation de `quarkus-web-bundler` :
+
+        ```kotlin
+        implementation("io.quarkiverse.web-bundler:quarkus-web-bundler:2.2.1")
+        ```
+
+    </TabItem>
+  </Tabs>
+
+  <Aside type="note">
+          Indiquez bien la version de l'extension `quarkus-web-bundler` que vous souhaitez utiliser, car elle ne semble pas figurer dans le **BOM de Quarkus** et il est important de s'assurer que vous utilisez une version compatible avec votre version de **Quarkus**.
+  </Aside>
+
+  <Aside type="caution">
+            La version indiquée ici est la dernière version stable au moment de la rédaction de ce guide, mais il est recommandé de vérifier les dernières versions disponibles sur le [site officiel de Quarkiverse](https://quarkus.io/extensions/io.quarkiverse.web-bundler/quarkus-web-bundler/) pour vous assurer d'utiliser la version la plus récente et compatible avec votre projet.
+    </Aside>
+
+</Card>
+
+Une fois configurée, l'intégration avec **Qute** est très simple. Il suffit d’utiliser la directive `{#bundle /}` dans le `<head>` de votre **template** :
+
+```html {4} title="index.html"
+<head>
+    <meta charset="UTF-8">
+    <title>Alien Optimisation</title>
+    {#bundle /}
+</head>
+```
+
+Cette directive est interprétée par **Qute** et injecte automatiquement les liens vers les **assets** optimisés générés lors du **build**.
+
+Vous n'avez donc plus besoin de référencer manuellement vos fichiers CSS et JavaScript.
+
+<Aside type="note">
+    L'extension `quarkus-web-bundler` est compatible avec des outils comme **Tailwind CSS** ou **Sass**, ce qui vous permet d'intégrer des workflows de styling plus avancés sans dépendre d’un environnement **Node.js** complet.
+</Aside>

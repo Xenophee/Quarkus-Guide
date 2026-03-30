@@ -1,0 +1,326 @@
+---
+title: Layouts et fragments
+description: Comment structurer vos templates avec des layouts et des fragments pour une meilleure réutilisabilité et maintenabilité.
+sidebar:
+    order: 5
+---
+
+import {Aside, TabItem, Tabs, LinkCard} from '@astrojs/starlight/components';
+import {Underline, HR} from '@components/index';
+
+
+Dans l'article précédent, nous avons vu comment créer des **templates** simples avec **Qute**. Cependant, à mesure que votre application évolue, il devient essentiel de structurer vos vues pour éviter la duplication de code et faciliter la maintenance.
+
+C'est là qu'interviennent les notions de **layout** et de **fragments**.
+
+
+## Layout
+
+Dans une application, certaines parties de l'interface sont souvent communes à plusieurs pages : en-tête, pied de page, navigation, etc.
+
+Plutôt que de dupliquer ce code dans chaque **template**, il est préférable de le factoriser dans un **template** de base réutilisable.
+
+En pratique, cela consiste à définir une structure commune, puis à y injecter du contenu spécifique à chaque page.
+
+Voici un exemple de template de base (`base.html`) :
+
+```html title="base.html"
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Weyland-Yutani</title>
+</head>
+<body>
+    <header>
+        <h1>Bienvenue chez Weyland-Yutani</h1>
+    </header>
+    <main>
+        <p>Dans l'espace, personne ne vous entend crier...</p>
+    </main>
+    <footer>
+        <p>Tous droits réservés © Weyland-Yutani Corporation</p>
+    </footer>
+</body>
+</html>
+```
+
+L'objectif est maintenant d'extraire certaines parties pour les rendre réutilisables.
+
+
+### La commande `#include`
+
+Vous pouvez isoler des blocs dans des fichiers dédiés, comme `header.html` et `footer.html`, puis les inclure dans vos **templates** grâce au mot clef `#include`.
+
+```html {8,12} title="base.html"
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Weyland-Yutani</title>
+</head>
+<body>
+    {#include header /}
+    <main>
+        <p>Dans l'espace, personne ne vous entend crier...</p>
+    </main>
+    {#include footer /}
+</body>
+</html>
+```
+
+La section `#include` permet d'inclure un autre **template**, tout en conservant la possibilité de lui passer des paramètres si nécessaire.
+
+
+### La commande `#insert`
+
+Pour rendre votre **layout** réellement réutilisable, vous devez pouvoir injecter du contenu spécifique dans certaines zones.
+
+C'est le rôle de `#insert`, qui agit comme un **slot** (emplacement dynamique).
+
+```html {10,11} title="base.html"
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Weyland-Yutani</title>
+</head>
+<body>
+    {#include header /}
+    <main>
+        <h1>{#insert title}Bienvenue sur le Nostromo{/}</h1>
+        {#insert } {/}
+    </main>
+    {#include footer /}
+</body>
+</html>
+```
+
+Ici :
+
+- `#insert title` définit une zone nommée
+- `#insert` sans nom correspond au contenu principal
+
+Chaque page peut ensuite injecter son propre contenu dans ces emplacements.
+
+
+#### Utilisation d'un layout
+
+Voici un exemple de **template** qui utilise `base.html` :
+
+```html {3,5} title="home.html"
+{#include base}
+
+    {#title}J'ai décidé de redéfinir le titre par défaut{/}
+
+    <p>Je suis un paragraphe perdu dans l'espace</p>
+{/}
+```
+
+Dans cet exemple :
+
+- `{#title}` remplace la section `#insert title`
+- le contenu libre remplace la section principale
+
+
+#### Utilisation avec des variables
+
+Vous pouvez également utiliser des **variables** pour rendre votre **layout** plus dynamique.
+
+Par exemple, dans `base.html` :
+
+```html {10} title="base.html"
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Weyland-Yutani</title>
+</head>
+<body>
+    {#include header /}
+    <main>
+        <h1>{title}</h1>
+        {#insert } {/}
+    </main>
+    {#include footer /}
+</body>
+</html>
+```
+
+Puis dans votre **template** :
+
+```html "title="Je remplace le titre"" title="home.html"
+{#include base title="Je remplace le titre" /}
+    <p>Je suis un paragraphe perdu dans l'espace</p>
+{/}
+```
+
+Ici, la **variable** `title` est transmise au **template** lors de l'inclusion.
+
+Cela permet de combiner :
+
+- structure réutilisable (layout)
+- données dynamiques (expressions)
+
+Cette approche permet de construire des interfaces propres, modulaires et faciles à maintenir, tout en conservant la simplicité du rendu côté serveur.
+
+
+<HR />
+
+## Fragments
+
+Les **fragments** sont des portions de code définies à l'intérieur d'un **template**, qui peuvent être rendues indépendamment du reste de la page.
+
+Ce mécanisme est particulièrement utile pour des interfaces dynamiques, notamment lorsqu'on utilise **HTMX** ou des **requêtes Ajax**.
+
+Par exemple, vous pouvez définir un **template** `astronaut.html` contenant un **fragment** représentant un élément de liste. Ce **fragment** pourra ensuite être renvoyé seul pour mettre à jour une partie de la page sans recharger l'ensemble.
+
+### Déclaration d'un fragment
+
+Un **fragment** se définit avec la section `#fragment` :
+
+```html {3,5} title="astronaut.html"
+<ul id="astroList">
+    {#for astro in astronauts}
+        {#fragment id=astroItem}
+            <li>{astro.name}</li>
+        {/fragment}
+    {/for}
+</ul>
+```
+
+Le rendu du **template** `astronaut.html` affichera la liste des astronautes, mais le **fragment** `astroItem` peut être rendu séparément pour mettre à jour la liste de manière dynamique. Par exemple, vous pouvez créer un **endpoint REST** qui rend ce **fragment** pour ajouter un nouvel astronaute à la liste sans recharger la page entière.
+
+
+### Rendu d'un fragment
+
+<Tabs>
+    <TabItem label="Template type-safety" icon="right-caret">
+
+    ```java title="AstronautResource.java"
+    @Path("/")
+    public class AstronautResource {
+
+        @CheckedTemplate
+        public static class Templates {
+            public static native TemplateInstance astronaut(List<Astronaut> astronauts);
+            public static native TemplateInstance astronaut$astroItem(Astronaut astro);
+        }
+
+        @GET
+        public TemplateInstance getAstronauts() {
+            List<Astronaut> astronauts = // Récupérer la liste des astronautes (logique de récupération non montrée ici)
+            return Templates.astronaut(astronauts);
+        }
+
+
+        @POST
+        @Path("/add")
+        public TemplateInstance addAstronaut(@FormParam("name") String name) {
+            Astronaut astro = new Astronaut(name);
+            // Ajouter l'astronaute à la liste (logique de stockage non montrée ici)
+            return Templates.astronaut$astroItem(astro);
+        }
+    }
+    ```
+
+    Avec l'approche type-safe, chaque **fragment** peut être exposé via une **méthode** dédiée.
+
+    La convention est la suivante : `template$fragment`
+
+    Ici, `astronaut$astroItem` correspond au **fragment** `astroItem` du **template** `astronaut.html`.
+
+    </TabItem>
+    <TabItem label="Template classique" icon="right-caret">
+
+    ```java title="AstronautResource.java"
+    @Path("/")
+    public class AstronautResource {
+
+        private final Template astronaut;
+
+        @Inject
+        public AstronautResource(Template astronaut) {
+            this.astronaut = astronaut;
+        }
+
+        @GET
+        public TemplateInstance getAstronauts() {
+            List<Astronaut> astronauts = // Récupérer la liste des astronautes (logique de récupération non montrée ici)
+            return astronaut.data("astronauts", astronauts);
+        }
+
+        @POST
+        @Path("/add")
+        public TemplateInstance addAstronaut(@FormParam("name") String name) {
+            Astronaut astro = new Astronaut(name);
+            // Ajouter l'astronaute à la liste (logique de stockage non montrée ici)
+            return astronaut.getFragment("astroItem").data("astro", astro);
+        }
+    }
+    ```
+
+    Sans type-safety, vous pouvez utiliser `getFragment("astroItem")` pour récupérer le **fragment**, puis lui injecter ses données via `data()`.
+
+    </TabItem>
+</Tabs>
+
+
+### Intégration avec HTMX
+
+Pour rendre l'interface réellement dynamique, vous pouvez utiliser **HTMX** afin de charger des **fragments** à la volée.
+
+
+```html title="astronaut.html"
+<ul id="astroList">
+    {#for astro in astronauts}
+        {#fragment id=astroItem}
+            <li>{astro.name}</li>
+        {/fragment}
+    {/for}
+</ul>
+
+<form hx-post="/add" hx-target="#astroList" hx-swap="beforeend">
+    <input type="text" name="name" placeholder="Nom de l'astronaute" required />
+    <button type="submit">Ajouter</button>
+</form>
+```
+
+Ici :
+
+- `hx-post` envoie une requête POST
+- `hx-target` cible la liste
+- `hx-swap="beforeend"` ajoute le fragment à la fin
+
+Le serveur renvoie uniquement le **fragment HTML**, qui est inséré directement dans la page.
+
+<hr />
+
+<LinkCard
+    title="Documentation officielle de HTMX"
+    href="https://htmx.org/"
+    description="Pour en savoir plus sur HTMX et ses fonctionnalités."
+/>
+
+<HR />
+
+## Template ou Fragment ?
+
+Un **template** représente généralement une vue complète ou un composant réutilisable.
+
+Un **fragment**, lui, correspond à une portion d'un **template** que l'on souhaite pouvoir rendre indépendamment.
+
+En résumé :
+
+- utilisez un **template** pour structurer votre application
+- utilisez un **fragment** pour découper dynamiquement une page existante
+
+
+| Situation | Template séparé | Fragment dans le template | Pourquoi |
+|---|---|---|---|
+| Bloc réutilisé dans plusieurs pages | ✅ Oui | ❌ Non | Composant partagé |
+| Bloc spécifique à une seule page | ❌ Non | ✅ Oui | Évite un fichier inutile |
+| Bloc rendu seul depuis Java (endpoint dédié) | ✅ Oui | ✅ Oui | Deux approches possibles |
+| Gros bloc HTML complexe | ✅ Oui | ❌ Non | Meilleure lisibilité |
+| Mise à jour partielle (HTMX) | ✅ Oui | ✅ Oui | Les deux fonctionnent |
+| Structure globale de page | ✅ Oui | ❌ Non | Meilleure organisation |

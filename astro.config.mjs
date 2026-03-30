@@ -50,6 +50,10 @@ export default defineConfig({
 						{ label: 'Example Guide', slug: 'guides/example' },
 					],
 				},*/
+                {
+                    label: 'Interface Web Qute',
+                    autogenerate: { directory: 'templates-qute' }, badge: { text: 'Nouveau' },
+                },
 				{
 					label: 'Panache ORM',
 					autogenerate: { directory: 'panache-orm' },

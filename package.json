@@ -10,15 +10,15 @@
         "astro": "astro"
     },
     "dependencies": {
-        "@astrojs/starlight": "^0.37.0",
-        "@astrojs/starlight-tailwind": "^4.0.2",
+        "@astrojs/starlight": "^0.38.2",
+        "@astrojs/starlight-tailwind": "^5.0.0",
         "@tailwindcss/vite": "^4.0.7",
-        "astro": "^5.16.2",
+        "astro": "^6.1.1",
         "devicon": "^2.17.0",
-        "remixicon": "^4.7.0",
-        "sharp": "^0.34.2",
-        "starlight-giscus": "^0.8.1",
-        "starlight-versions": "^0.5.6",
-        "tailwindcss": "^4.0.7"
+        "remixicon": "^4.9.1",
+        "sharp": "^0.34.5",
+        "starlight-giscus": "^0.9.1",
+        "starlight-versions": "^0.8.1",
+        "tailwindcss": "^4.2.1"
     }
 }

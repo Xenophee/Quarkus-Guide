@@ -1,0 +1,172 @@
+---
+title: Composants réutilisables
+description: Créez des composants réutilisables pour votre projet à l'aide des tags de Qute.
+sidebar:
+    order: 6
+---
+
+import {Aside, TabItem, Tabs, LinkCard} from '@astrojs/starlight/components';
+import {Underline, HR} from '@components/index';
+
+**Qute** permet de créer des composants réutilisables appelés **tags**.
+
+Un **tag** est un **template** spécialisé, conçu pour encapsuler un bloc d'affichage réutilisable. Il permet d'éviter la duplication de code et d'améliorer la lisibilité ainsi que la maintenabilité de vos **templates**.
+
+Contrairement aux **fragments**, qui sont définis à l'intérieur d'un **template** existant, les **tags** sont des **templates** indépendants, pensés pour être réutilisés dans toute l'application.
+
+Ils doivent être placés dans le répertoire : `src/main/resources/templates/tags` et peuvent ensuite être utilisés directement par leur nom.
+
+<Aside type="note">
+    Par défaut, il est recommandé de placer vos tags directement dans ce dossier. Si vous avez besoin d'organisation, vous pouvez utiliser des conventions de nommage, par exemple :
+
+    - `card_astronaut.html`
+    - `card_ship.html`
+</Aside>
+
+## Créer un tag
+
+Pour commencer, créons un tag permettant d'afficher une carte d'astronaute :
+
+```html title="card.html"
+<div>
+    <h2>{it.name}</h2>
+    <p>Âge : {it.age}</p>
+    <p>Mission : {it.mission}</p>
+</div>
+```
+
+La **variable** `it` représente le contexte du **tag**, <Underline>c'est-à-dire l'objet passé lors de son appel</Underline>.
+
+Vous pouvez ensuite utiliser ce **tag** dans un autre template :
+
+```html {2} title="astronaut.html"
+{#for astro in astronauts}
+    {#card astro /}
+{/for}
+```
+
+Ici, chaque objet `astro` est transmis au **tag** et devient accessible via `it`.
+
+Concrètement, cela permet d'encapsuler un bloc **HTML** réutilisable avec une syntaxe claire et concise.
+
+<HR />
+
+## Ajouter du contenu dans un tag
+
+Un **tag** peut également accepter du contenu supplémentaire, injecté au moment de son utilisation.
+
+Pour cela, **Qute** propose la **variable** spéciale `nested-content`, qui agit comme un **slot dynamique**.
+
+```html {5} title="card.html"
+<div>
+    <h2>{it.name}</h2>
+    <p>Âge : {it.age}</p>
+    <p>Mission : {it.mission}</p>
+    {nested-content}
+</div>
+```
+
+Lors de l'appel du tag, vous pouvez fournir du contenu :
+
+```html title="astronaut.html"
+{#for astro in astronauts}
+    {#card astro}
+        <p>Statut : {astro.status}</p>
+    {/card}
+{/for}
+```
+
+Ce contenu sera injecté à l'emplacement de `nested-content`.
+
+<Aside type="note">
+    Cela fonctionne de manière similaire à `#insert`, mais est spécifiquement adapté aux **tags**.
+</Aside>
+
+
+<HR />
+
+## Rendre l'affichage d'un tag conditionnel
+
+Il est possible de rendre l'affichage d'un tag conditionnel en fonction de certaines données.
+
+La première approche consiste à appliquer la condition directement dans le **template** appelant :
+
+```html title="astronaut.html"
+{#for astro in astronauts}
+    {#if astro.status == 'active'}
+        {#card astro /}
+    {/if}
+{/for}
+```
+
+Cependant, il est souvent préférable d'intégrer cette logique directement dans le **tag** lui-même afin de centraliser le comportement.
+
+```html title="card.html"
+{#if it.status == status}
+    <div>
+        <h2>{it.name}</h2>
+        <p>Âge : {it.age}</p>
+        <p>Mission : {it.mission}</p>
+    </div>
+{/if}
+```
+
+Ici :
+
+- `it` représente l'objet passé au **tag** (l'astronaute)
+- `status` est un **paramètre** du **tag**
+
+Vous pouvez ensuite utiliser ce **tag** en lui passant une valeur :
+
+```html {2} title="astronaut.html"
+{#for astro in astronauts}
+    {#card astro status="active" /}
+{/for}
+```
+
+Seuls les astronautes ayant un statut "active" seront affichés.
+
+Cette approche permet de créer des **tags** plus intelligents et réutilisables, en encapsulant la logique directement dans le composant.
+
+<HR />
+
+## Isolation des données
+
+Par défaut, les **tags** sont isolés du contexte dans lequel ils sont utilisés.
+
+Cela signifie que seules les données explicitement passées au **tag** sont accessibles. Les **variables** du **template** parent ne sont pas visibles.
+
+Ce comportement est volontaire et permet de garantir :
+
+- une meilleure encapsulation
+- une meilleure réutilisabilité
+- moins d'effets de bord
+
+Cependant, dans certains cas, vous pouvez avoir besoin d'accéder aux données du **template** parent.
+
+Pour cela, vous pouvez utiliser le mot-clé `_unisolated` :
+
+```html title="astronaut.html"
+{#for astro in astronauts}
+    {#card astro _unisolated}
+        <p>Vaisseau : {ship.name}</p>
+    {/card}
+{/for}
+```
+
+Ici, le **tag** peut accéder à la **variable** `ship` définie dans le **template** parent.
+
+<Aside type="caution">
+    Cela peut rendre le code plus difficile à comprendre et à maintenir. Il est donc recommandé de privilégier le passage explicite des données en paramètres.
+
+    Par exemple :
+    ```html
+    {#card astro ship=ship /}
+    ```
+
+    Cette approche est plus claire et compatible avec une utilisation type-safe.
+</Aside>
+
+Lorsque vous utilisez une approche **type-safe** avec `@CheckedTemplate`, seules les données définies dans la signature de la méthode sont connues à la compilation.
+
+Si votre **tag** dépend de données externes (comme ship), vous devez les passer explicitement en **paramètre**. Sinon, **Qute** ne pourra pas valider correctement le **template** au **build**.
